@@ -24,7 +24,7 @@ export const MansionProvider = ({ children }) => {
 
   const fetchFeaturedMansions = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.comapi/featured');
+      const res = await axios.get('https://backend-5kh4.onrender.com/api/featured');
       console.log('Fetched featured mansions:', res.data);
       setFeaturedMansions(res.data);
     } catch (err) {
