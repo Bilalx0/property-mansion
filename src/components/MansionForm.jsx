@@ -46,7 +46,7 @@ const MansionForm = () => {
     if (id) {
       const fetchProperty = async () => {
         try {
-          const response = await axios.get(`http://localhost:5001/api/propertyDetail/${id}`);
+          const response = await axios.get(`https://backend-5kh4.onrender.com/api/propertyDetail/${id}`);
           const data = response.data;
           // Ensure amenities is a string (convert array if necessary)
           setMansionData({
@@ -107,13 +107,13 @@ const MansionForm = () => {
       let response;
       if (id) {
         // Update existing property
-        response = await axios.put(`http://localhost:5001/api/propertyDetail/${id}`, formData, {
+        response = await axios.put(`https://backend-5kh4.onrender.com/api/propertyDetail/${id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           timeout: 30000,
         });
       } else {
         // Create new property
-        response = await axios.post("http://localhost:5001/api/propertyDetail", formData, {
+        response = await axios.post("https://backend-5kh4.onrender.com/api/propertyDetail", formData, {
           headers: { "Content-Type": "multipart/form-data" },
           timeout: 30000,
         });

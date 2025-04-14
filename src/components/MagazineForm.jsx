@@ -25,7 +25,7 @@ const MagazineForm = () => {
     if (id) {
       const fetchArticle = async () => {
         try {
-          const response = await axios.get(`http://localhost:5001/api/magazineDetail/${id}`);
+          const response = await axios.get(`https://backend-5kh4.onrender.com/api/magazineDetail/${id}`);
           const data = response.data;
           setFormData({
             author: data.author || "",
@@ -85,14 +85,14 @@ const MagazineForm = () => {
       let response;
       if (id) {
         // Update existing article
-        response = await axios.put(`http://localhost:5001/api/magazineDetail/${id}`, submitData, {
+        response = await axios.put(`https://backend-5kh4.onrender.com/api/magazineDetail/${id}`, submitData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setSuccess("Article updated successfully!");
         navigate("/dashboard/magazine");
       } else {
         // Create new article
-        response = await axios.post("http://localhost:5001/api/magazineDetail", submitData, {
+        response = await axios.post("https://backend-5kh4.onrender.com/api/magazineDetail", submitData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setSuccess("Article submitted successfully!");

@@ -18,13 +18,13 @@ const MagazineCollection = () => {
     useEffect(() => {
         const fetchData = async () => {
           try {
-            const response = await axios.get("http://localhost:5001/api/magazine");
+            const response = await axios.get("https://backend-5kh4.onrender.com/api/magazine");
             console.log("API Response:", response.data);
   
             if (response.data) {
               setHeading(response.data.heading || "No heading available");
               setSubheading(response.data.subheading || "No subheading available");
-              setmagazineImage(`http://localhost:5001${response.data.image}` || "/default-image.jpg");
+              setmagazineImage(`https://backend-5kh4.onrender.com${response.data.image}` || "/default-image.jpg");
             }
           } catch (error) {
             console.error("Error fetching content:", error);

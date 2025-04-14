@@ -20,39 +20,39 @@ const FeaturedListings = () => {
     const fetchData = async () => {
       try {
         // Fetch Featured Listings
-        const featuredRes = await axios.get('http://localhost:5001/api/featured');
+        const featuredRes = await axios.get('https://backend-5kh4.onrender.com/api/featured');
         console.log('Featured Properties:', featuredRes.data);
         setFeaturedProperties(featuredRes.data);
 
         // Fetch Mansion Featured
-        const mansionRes = await axios.get('http://localhost:5001/api/mansion/featured');
+        const mansionRes = await axios.get('https://backend-5kh4.onrender.com/api/mansion/featured');
         console.log('Mansion Featured:', mansionRes.data);
         setMansionFeatured(mansionRes.data);
 
         // Fetch Penthouse Featured
-        const penthouseRes = await axios.get('http://localhost:5001/api/penthouse/featured');
+        const penthouseRes = await axios.get('https://backend-5kh4.onrender.com/api/penthouse/featured');
         console.log('Penthouse Featured:', penthouseRes.data);
         setPenthouseFeatured(penthouseRes.data);
 
         // Fetch Collectibles Featured
-        const collectiblesRes = await axios.get('http://localhost:5001/api/collectibles/featured');
+        const collectiblesRes = await axios.get('https://backend-5kh4.onrender.com/api/collectibles/featured');
         console.log('Collectibles Featured:', collectiblesRes.data);
         setCollectiblesFeatured(collectiblesRes.data);
 
         // Fetch Mansion Description and Button Text
-        const mansionContentRes = await axios.get('http://localhost:5001/api/mansion');
+        const mansionContentRes = await axios.get('https://backend-5kh4.onrender.com/api/mansion');
         console.log('Mansion Content:', mansionContentRes.data);
         setMansionDescription(mansionContentRes.data.description || 'No description available');
         setMansionBtnText(mansionContentRes.data.btntext || 'No button text available');
 
         // Fetch Penthouse Description and Button Text
-        const penthouseContentRes = await axios.get('http://localhost:5001/api/penthouse');
+        const penthouseContentRes = await axios.get('https://backend-5kh4.onrender.com/api/penthouse');
         console.log('Penthouse Content:', penthouseContentRes.data);
         setPenthouseDescription(penthouseContentRes.data.description || 'No description available');
         setPenthouseBtnText(penthouseContentRes.data.btntext || 'No button text available');
 
         // Fetch Collectibles Description and Button Text
-        const collectiblesContentRes = await axios.get('http://localhost:5001/api/collectibles');
+        const collectiblesContentRes = await axios.get('https://backend-5kh4.onrender.com/api/collectibles');
         console.log('Collectibles Content:', collectiblesContentRes.data);
         setCollectiblesDescription(collectiblesContentRes.data.description || 'No description available');
         setCollectiblesBtnText(collectiblesContentRes.data.btntext || 'No button text available');

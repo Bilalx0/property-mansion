@@ -151,7 +151,7 @@ const ListingPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("http://localhost:5001/api/inquiries", {
+    const response = await fetch("https://backend-5kh4.onrender.com/api/inquiries", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -231,7 +231,7 @@ const ListingPage = () => {
         {/* Main Hero Image and Property Title */}
         <div className="relative w-full h-[50vh] mb-8">
           <img
-            src={`http://localhost:5001${property.image}`}
+            src={`https://backend-5kh4.onrender.com${property.image}`}
             alt={property.title}
             className="w-full h-full object-cover"
           />
@@ -434,7 +434,7 @@ const ListingPage = () => {
                 </div>
                 {property.agentimage ? (
                   <img
-                    src={`http://localhost:5001${property.agentimage}`}
+                    src={`https://backend-5kh4.onrender.com${property.agentimage}`}
                     alt={property.agentname}
                     className="w-20 h-20 rounded-full object-cover"
                   />

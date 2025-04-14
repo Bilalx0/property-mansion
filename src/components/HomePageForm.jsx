@@ -70,7 +70,7 @@ const HomePageForm = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5001/api/featured', {
+      const response = await axios.post('https://backend-5kh4.onrender.com/api/featured', {
         references,
       });
 
@@ -110,7 +110,7 @@ const HomePageForm = () => {
     formData.append('image', heroData.image);
 
     try {
-      const response = await axios.post('http://localhost:5001/api/hero', formData, {
+      const response = await axios.post('https://backend-5kh4.onrender.com/api/hero', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -150,14 +150,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('http://localhost:5001/api/mansion', {
+      await axios.post('https://backend-5kh4.onrender.com/api/mansion', {
         description: mansionData.description,
         btntext: mansionData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('http://localhost:5001/api/mansion/featured', {
+        await axios.post('https://backend-5kh4.onrender.com/api/mansion/featured', {
           references,
         });
       }
@@ -201,14 +201,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('http://localhost:5001/api/penthouse', {
+      await axios.post('https://backend-5kh4.onrender.com/api/penthouse', {
         description: penthouseData.description,
         btntext: penthouseData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('http://localhost:5001/api/penthouse/featured', {
+        await axios.post('https://backend-5kh4.onrender.com/api/penthouse/featured', {
           references,
         });
       }
@@ -252,14 +252,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('http://localhost:5001/api/collectibles', {
+      await axios.post('https://backend-5kh4.onrender.com/api/collectibles', {
         description: collectiblesData.description,
         btntext: collectiblesData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('http://localhost:5001/api/collectibles/featured', {
+        await axios.post('https://backend-5kh4.onrender.com/api/collectibles/featured', {
           references,
         });
       }
@@ -300,7 +300,7 @@ const HomePageForm = () => {
     formData.append('image', magazineData.image);
 
     try {
-      const response = await axios.post('http://localhost:5001/api/magazine', formData, {
+      const response = await axios.post('https://backend-5kh4.onrender.com/api/magazine', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

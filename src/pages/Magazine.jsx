@@ -87,7 +87,7 @@ const Magazine = () => {
     const fetchMagazines = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5001/api/magazineDetails"
+          "https://backend-5kh4.onrender.com/api/magazineDetails"
         );
         // Ensure all fetched articles have a category; assign a default if missing
         const sanitizedMagazines = response.data.map((article) => ({
@@ -209,7 +209,7 @@ const Magazine = () => {
                   <img
                     src={
                       selectedArticle.mainImage
-                        ? `http://localhost:5001${selectedArticle.mainImage}`
+                        ? `https://backend-5kh4.onrender.com${selectedArticle.mainImage}`
                         : selectedArticle.image || newImage
                     }
                     alt="Main Article"
@@ -253,7 +253,7 @@ const Magazine = () => {
                       <img
                         src={
                           article.mainImage
-                            ? `http://localhost:5001${article.mainImage}`
+                            ? `https://backend-5kh4.onrender.com${article.mainImage}`
                             : article.image || newImage
                         }
                         alt={article.title}
@@ -312,7 +312,7 @@ const Magazine = () => {
                       <img
                         src={
                           article.mainImage
-                            ? `http://localhost:5001${article.mainImage}`
+                            ? `https://backend-5kh4.onrender.com${article.mainImage}`
                             : article.image || newImage
                         }
                         alt={article.title}

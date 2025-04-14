@@ -22,13 +22,13 @@ const BlogPage = () => {
       try {
         // Fetch the specific article
         const detailResponse = await axios.get(
-          `http://localhost:5001/api/magazineDetail/${id}`
+          `https://backend-5kh4.onrender.com/api/magazineDetail/${id}`
         );
         setFeaturedArticle(detailResponse.data);
 
         // Fetch all articles for "Related Publishings"
         const allResponse = await axios.get(
-          "http://localhost:5001/api/magazineDetails"
+          "https://backend-5kh4.onrender.com/api/magazineDetails"
         );
         setMagazineDetails(allResponse.data.filter((article) => article._id !== id)); // Exclude the featured article
         setLoading(false);

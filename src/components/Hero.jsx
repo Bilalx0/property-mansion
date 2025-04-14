@@ -10,12 +10,12 @@ const ResponsiveHero = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/api/hero");
+        const response = await axios.get("https://backend-5kh4.onrender.com/api/hero");
         console.log("API Response:", response.data);
 
         if (response.data) {
           setHeading(response.data.heading || "No content available");
-          setHeroImage(`http://localhost:5001${response.data.image}` || "/default-image.jpg");
+          setHeroImage(`https://backend-5kh4.onrender.com${response.data.image}` || "/default-image.jpg");
           setSubheading(response.data.subheading || "No subheading available");
         }
       } catch (error) {

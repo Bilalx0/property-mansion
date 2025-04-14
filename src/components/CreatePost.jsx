@@ -4,7 +4,7 @@ import PenthouseForm from "./PenthouseForm";
 import MagazineForm from "./MagazineForm";
 import Collectibles from "./Collectibles";
 import HomePageForm from "./HomePageForm";
-import NewDevelopmentForm from "../components/NewDevelopmentform";
+import NewDevelopmentForm from "./NewDevelopmentform";
 function CreatePost() {
   const [category, setCategory] = useState("");
 

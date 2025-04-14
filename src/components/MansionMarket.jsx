@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import logo from "../assests/TMM-LANDING PAGE 1.svg";
 import { Menu, X } from "lucide-react";
-import MansionList from "../components/MansionList";
+import MansionList from "./MansionList";
 
 const MansionMarket = () => {
   const [menuOpen, setMenuOpen] = useState(false);

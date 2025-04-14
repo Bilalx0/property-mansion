@@ -42,7 +42,7 @@ const Dashboard = ({
 
     try {
       setLoading(true);
-      await axios.delete(`http://localhost:5001${endpoint}/${id}`);
+      await axios.delete(`https://backend-5kh4.onrender.com${endpoint}/${id}`);
       toast.success(`${type} deleted successfully`);
 
       // Update state based on viewType
@@ -112,7 +112,7 @@ const Dashboard = ({
   useEffect(() => {
     const fetchInquiries = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/api/inquiries");
+        const response = await axios.get("https://backend-5kh4.onrender.com/api/inquiries");
         setInquiries(response.data);
       } catch (error) {
         console.error("Error fetching inquiries:", error);
@@ -131,7 +131,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5001/api/newsletter");
+        const response = await axios.get("https://backend-5kh4.onrender.com/api/newsletter");
         const transformedData = response.data.map((item) => ({
           id: item._id,
           email: item.email || "N/A",
@@ -158,7 +158,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5001/api/properties");
+        const response = await axios.get("https://backend-5kh4.onrender.com/api/properties");
         const data = response.data;
 
         const transformedData = data
@@ -199,7 +199,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5001/api/magazineDetails");
+        const response = await axios.get("https://backend-5kh4.onrender.com/api/magazineDetails");
         const transformedData = response.data.map((item) => ({
           id: item._id,
           author: item.author || "N/A",
