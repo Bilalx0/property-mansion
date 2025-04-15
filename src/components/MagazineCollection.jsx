@@ -24,7 +24,7 @@ const MagazineCollection = () => {
             if (response.data) {
               setHeading(response.data.heading || "No heading available");
               setSubheading(response.data.subheading || "No subheading available");
-              setmagazineImage(`https://backend-5kh4.onrender.com${response.data.image}` || "/default-image.jpg");
+              setmagazineImage(`${response.data.image}` || "/default-image.jpg");
             }
           } catch (error) {
             console.error("Error fetching content:", error);

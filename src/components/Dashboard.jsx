@@ -10,8 +10,8 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../assests/TMM-LANDING PAGE 1.svg";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import axios from "axios"; // Assuming axios is installed
-import { toast, ToastContainer } from "react-toastify"; // For notifications
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const Dashboard = ({
@@ -31,7 +31,7 @@ const Dashboard = ({
   const [magazineDetails, setMagazineDetails] = useState([]);
   const navigate = useNavigate();
 
-  // Handle row click (optional, for viewing details)
+  // Handle row click
   const handleRowClick = (item) => {
     console.log("Selected item:", item);
   };
@@ -45,7 +45,6 @@ const Dashboard = ({
       await axios.delete(`https://backend-5kh4.onrender.com${endpoint}/${id}`);
       toast.success(`${type} deleted successfully`);
 
-      // Update state based on viewType
       if (type === "Inquiry") {
         setInquiries(inquiries.filter((item) => item._id !== id));
       } else if (type === "Newsletter") {
@@ -63,7 +62,7 @@ const Dashboard = ({
     }
   };
 
-  // Handle edit click (redirect to form with ID)
+  // Handle edit click
   const handleEditClick = (e, id, type) => {
     e.stopPropagation();
     if (type === "Magazine Article") {
@@ -78,16 +77,31 @@ const Dashboard = ({
     console.log(`Add new ${type}`);
   };
 
-  // Pagination
+  // Filtering logic for inquiries (leads)
+  const filteredInquiries = inquiries.filter((inquiry) => {
+    const matchesSearch =
+      inquiry.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inquiry.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inquiry.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inquiry.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDate =
+      !selectedDate ||
+      new Date(inquiry.createdAt).toDateString() === selectedDate.toDateString();
+    return matchesSearch && matchesDate;
+  });
+
+  // Pagination for inquiries
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentPosts = inquiries.slice(startIndex, startIndex + itemsPerPage);
+  const currentPosts = filteredInquiries.slice(startIndex, startIndex + itemsPerPage);
+  const calculatedTotalPages = Math.ceil(filteredInquiries.length / itemsPerPage);
 
   // Filtering logic for properties
   const filteredProperties = properties.filter((property) => {
     const matchesSearch =
       viewType === "property"
         ? property.email?.toLowerCase().includes(searchTerm.toLowerCase())
-        : property.title?.toLowerCase().includes(searchTerm.toLowerCase()) || true;
+        : property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          property.reference?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       filterCategory === "All" || property.category === filterCategory;
     const matchesDate =
@@ -99,9 +113,9 @@ const Dashboard = ({
 
   // Filtering logic for magazine details
   const filteredMagazineDetails = magazineDetails.filter((magazine) => {
-    const matchesSearch = magazine.title
-      ? magazine.title.toLowerCase().includes(searchTerm.toLowerCase())
-      : true;
+    const matchesSearch =
+      magazine.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      magazine.author?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDate =
       !selectedDate ||
       new Date(magazine.time).toDateString() === selectedDate.toDateString();
@@ -225,7 +239,7 @@ const Dashboard = ({
 
   return (
     <div className="flex-1 bg-[#F9F9F8]">
-      <ToastContainer /> {/* For notifications */}
+      <ToastContainer />
       <div className="flex bg-[#F9F9F8] pr-4 flex-col sm:flex-row justify-end py-6">
         <img src={logo} className="w-[400px]" alt="logo" />
       </div>
@@ -237,7 +251,7 @@ const Dashboard = ({
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Search Listing Agent"
+                  placeholder="Search by Email, Name, or Reference"
                   className="flex-1 px-4 py-2 text-gray-700 focus:outline-none border border-gray-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -285,47 +299,55 @@ const Dashboard = ({
                 </tr>
               </thead>
               <tbody>
-                {currentPosts.map((inquiry) => (
-                  <tr
-                    key={inquiry._id}
-                    className="hover:bg-gray-100"
-                    onClick={() => handleRowClick(inquiry)}
-                  >
-                    <td className="py-2 border text-center">{inquiry.reference || "N/A"}</td>
-                    <td className="py-2 px-2 border">{inquiry.firstName || "NEW"}</td>
-                    <td className="py-2 px-2 border">{inquiry.lastName || "N/A"}</td>
-                    <td className="py-2 border text-center">{inquiry.email || "N/A"}</td>
-                    <td className="py-2 px-2 border">{inquiry.phone || "N/A"}</td>
-                    <td className="py-2 px-2 border">
-                      {inquiry.createdAt
-                        ? `${new Date(inquiry.createdAt).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })} | ${new Date(inquiry.createdAt).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}`
-                        : "N/A"}
-                    </td>
-                    <td className="py-2 px-2 border">
-                      <div className="max-w-[200px] truncate" title={inquiry.message}>
-                        {inquiry.message || "N/A"}
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 border">
-                      <div className="flex gap-2 justify-center">
-                        <FaTrash
-                          className="text-red-600 cursor-pointer"
-                          onClick={() => handleDelete(inquiry._id, "Inquiry", "/api/inquiries")}
-                        />
-                      </div>
+                {currentPosts.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="py-2 px-2 border text-center">
+                      No leads match your search
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  currentPosts.map((inquiry) => (
+                    <tr
+                      key={inquiry._id}
+                      className="hover:bg-gray-100"
+                      onClick={() => handleRowClick(inquiry)}
+                    >
+                      <td className="py-2 border text-center">{inquiry.reference || "N/A"}</td>
+                      <td className="py-2 px-2 border">{inquiry.firstName || "NEW"}</td>
+                      <td className="py-2 px-2 border">{inquiry.lastName || "N/A"}</td>
+                      <td className="py-2 border text-center">{inquiry.email || "N/A"}</td>
+                      <td className="py-2 px-2 border">{inquiry.phone || "N/A"}</td>
+                      <td className="py-2 px-2 border">
+                        {inquiry.createdAt
+                          ? `${new Date(inquiry.createdAt).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })} | ${new Date(inquiry.createdAt).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}`
+                          : "N/A"}
+                      </td>
+                      <td className="py-2 px-2 border">
+                        <div className="max-w-[200px] truncate" title={inquiry.message}>
+                          {inquiry.message || "N/A"}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 border">
+                        <div className="flex gap-2 justify-center">
+                          <FaTrash
+                            className="text-red-600 cursor-pointer"
+                            onClick={() => handleDelete(inquiry._id, "Inquiry", "/api/inquiries")}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-            {totalPages > 1 && (
+            {calculatedTotalPages > 1 && (
               <div className="flex justify-between mt-4">
                 {currentPage > 1 && (
                   <button
@@ -335,7 +357,7 @@ const Dashboard = ({
                     Previous
                   </button>
                 )}
-                {currentPage < totalPages && (
+                {currentPage < calculatedTotalPages && (
                   <button
                     onClick={() => onPageChange(currentPage + 1)}
                     className="bg-gray-700 text-white px-4 py-2"
@@ -481,7 +503,7 @@ const Dashboard = ({
                 </Link>
                 <input
                   type="text"
-                  placeholder="Search By Title"
+                  placeholder="Search by Title or Reference"
                   className="flex-1 px-4 py-2 text-gray-700 focus:outline-none border border-gray-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -584,7 +606,7 @@ const Dashboard = ({
                 </Link>
                 <input
                   type="text"
-                  placeholder="Search By Title"
+                  placeholder="Search by Title or Reference"
                   className="flex-1 px-4 py-2 text-gray-700 focus:outline-none border border-gray-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -687,7 +709,7 @@ const Dashboard = ({
                 </Link>
                 <input
                   type="text"
-                  placeholder="Search By Name"
+                  placeholder="Search by Title or Reference"
                   className="flex-1 px-4 py-2 text-gray-700 focus:outline-none border border-gray-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -790,7 +812,7 @@ const Dashboard = ({
                 </Link>
                 <input
                   type="text"
-                  placeholder="Search By Title"
+                  placeholder="Search by Title or Author"
                   className="flex-1 px-4 py-2 text-gray-700 focus:outline-none border border-gray-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}

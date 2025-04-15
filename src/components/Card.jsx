@@ -10,7 +10,7 @@ const MansionCard = ({ mansion }) => {
       {/* Image and 'Featured' tag */}
       <div className="relative">
         <img
-          src={`https://backend-5kh4.onrender.com${mansion.image}`}
+          src={`${mansion.image}`}
           alt={mansion.title}
           className="w-full h-48 object-cover"
         />

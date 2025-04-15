@@ -15,7 +15,7 @@ const ResponsiveHero = () => {
 
         if (response.data) {
           setHeading(response.data.heading || "No content available");
-          setHeroImage(`https://backend-5kh4.onrender.com${response.data.image}` || "/default-image.jpg");
+          setHeroImage(`${response.data.image}` || "/default-image.jpg");
           setSubheading(response.data.subheading || "No subheading available");
         }
       } catch (error) {
