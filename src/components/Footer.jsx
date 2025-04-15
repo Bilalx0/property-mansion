@@ -8,11 +8,16 @@ const Footer = () => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
+
   const handleSubscribe = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await axios.post("https://backend-5kh4.onrender.com/api/newsletter", {
+      const res = await axios.post(`${BASE_URL}/api/newsletter`, {
         email,
         category: "Newsletter", // Set category to "Newsletter"
       });

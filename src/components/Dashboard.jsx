@@ -31,7 +31,12 @@ const Dashboard = ({
   const [magazineDetails, setMagazineDetails] = useState([]);
   const navigate = useNavigate();
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
   // Handle row click
+
   const handleRowClick = (item) => {
     console.log("Selected item:", item);
   };
@@ -42,7 +47,7 @@ const Dashboard = ({
 
     try {
       setLoading(true);
-      await axios.delete(`https://backend-5kh4.onrender.com${endpoint}/${id}`);
+      await axios.delete(`${BASE_URL}${endpoint}/${id}`);
       toast.success(`${type} deleted successfully`);
 
       if (type === "Inquiry") {
@@ -126,7 +131,7 @@ const Dashboard = ({
   useEffect(() => {
     const fetchInquiries = async () => {
       try {
-        const response = await axios.get("https://backend-5kh4.onrender.com/api/inquiries");
+        const response = await axios.get(`${BASE_URL}/api/inquiries`);
         setInquiries(response.data);
       } catch (error) {
         console.error("Error fetching inquiries:", error);
@@ -145,7 +150,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("https://backend-5kh4.onrender.com/api/newsletter");
+        const response = await axios.get(`${BASE_URL}/api/newsletter`);
         const transformedData = response.data.map((item) => ({
           id: item._id,
           email: item.email || "N/A",
@@ -172,7 +177,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("https://backend-5kh4.onrender.com/api/properties");
+        const response = await axios.get(`${BASE_URL}/api/properties`);
         const data = response.data;
 
         const transformedData = data
@@ -213,7 +218,7 @@ const Dashboard = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("https://backend-5kh4.onrender.com/api/magazineDetails");
+        const response = await axios.get(`${BASE_URL}/api/magazineDetails`);
         const transformedData = response.data.map((item) => ({
           id: item._id,
           author: item.author || "N/A",

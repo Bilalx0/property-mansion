@@ -6,6 +6,7 @@ const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -18,12 +19,18 @@ app.use(
   })
 );
 app.use(express.json());
+app.use("/Uploads", express.static(path.join(__dirname, "Uploads")));
 
 // Database connection
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB Connection Error:", err));
+
+// Validate MongoDB connection
+if (!process.env.MONGO_URI) {
+  console.error("MONGO_URI is not defined in environment variables.");
+}
 
 // Cloudinary configuration
 cloudinary.config({
@@ -33,7 +40,11 @@ cloudinary.config({
 });
 
 // Validate Cloudinary config
-if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+if (
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
   console.error("Cloudinary configuration is incomplete. Check environment variables.");
 }
 
@@ -61,15 +72,12 @@ const authMiddleware = (roles = []) => {
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
-
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
-
       if (roles.length && !roles.includes(decoded.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
-
       next();
     } catch (error) {
       console.error("Auth middleware error:", error);
@@ -279,28 +287,22 @@ const CollectiblesFeatured = mongoose.model("CollectiblesFeatured", collectibles
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, password, confirmPassword, role } = req.body;
-
     if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ firstName, lastName, email, password: hashedPassword, role });
     await user.save();
-
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-
     res.status(201).json({
       message: "User created successfully",
       token,
@@ -317,25 +319,20 @@ app.post("/api/auth/signup", async (req, res) => {
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
-
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
-
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-
     res.json({ token, role: user.role });
   } catch (error) {
     console.error("Login error:", error);
@@ -370,11 +367,9 @@ app.post("/api/hero", upload.single("image"), async (req, res) => {
   try {
     const { heading, subheading } = req.body;
     const imagePath = req.file?.path;
-
     if (!heading || !subheading || !imagePath) {
       return res.status(400).json({ error: "All fields are required" });
     }
-
     const newHero = new Hero({ heading, subheading, image: imagePath });
     await newHero.save();
     res.status(201).json({ message: "Hero content added successfully", data: newHero });
@@ -406,7 +401,11 @@ app.get("/api/heroes", async (req, res) => {
 
 app.get("/api/hero/:id", async (req, res) => {
   try {
-    const hero = await Hero.findById(req.params.id).lean();
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const hero = await Hero.findById(id).lean();
     if (!hero) return res.status(404).json({ message: "Hero not found" });
     res.json(hero);
   } catch (error) {
@@ -417,13 +416,15 @@ app.get("/api/hero/:id", async (req, res) => {
 
 app.put("/api/hero/:id", upload.single("image"), async (req, res) => {
   try {
+    const { id } = req.params;
     const { heading, subheading } = req.body;
     const imagePath = req.file?.path;
-
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const updateData = { heading, subheading };
     if (imagePath) updateData.image = imagePath;
-
-    const hero = await Hero.findByIdAndUpdate(req.params.id, updateData, {
+    const hero = await Hero.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -437,7 +438,11 @@ app.put("/api/hero/:id", upload.single("image"), async (req, res) => {
 
 app.delete("/api/hero/:id", async (req, res) => {
   try {
-    const hero = await Hero.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const hero = await Hero.findByIdAndDelete(id);
     if (!hero) return res.status(404).json({ message: "Hero not found" });
     res.json({ message: "Hero deleted successfully" });
   } catch (error) {
@@ -450,12 +455,13 @@ app.delete("/api/hero/:id", async (req, res) => {
 app.post("/api/mansion", async (req, res) => {
   try {
     const { description, btntext } = req.body;
+    console.log("POST /api/mansion received:", { description, btntext });
     if (!description || !btntext) {
       return res.status(400).json({ error: "All fields are required" });
     }
-
     const newMansion = new Mansion({ description, btntext });
     await newMansion.save();
+    console.log("Saved mansion content:", newMansion);
     res.status(201).json({ message: "Mansion content added successfully", data: newMansion });
   } catch (error) {
     console.error("Error saving mansion content:", error);
@@ -465,7 +471,9 @@ app.post("/api/mansion", async (req, res) => {
 
 app.get("/api/mansion", async (req, res) => {
   try {
+    console.log("GET /api/mansion called");
     const mansionContent = await Mansion.find().sort({ createdAt: -1 }).limit(1).lean();
+    console.log("Fetched mansion content:", mansionContent);
     res.json(mansionContent[0] || {});
   } catch (error) {
     console.error("Error fetching mansion content:", error);
@@ -473,19 +481,71 @@ app.get("/api/mansion", async (req, res) => {
   }
 });
 
-app.get("/api/mansions", async (req, res) => {
+// Mansion Featured (Placed BEFORE /api/mansion/:id to avoid routing conflict)
+app.get("/api/mansion/featured", async (req, res) => {
   try {
-    const mansions = await Mansion.find().sort({ createdAt: -1 }).lean();
-    res.json(mansions);
+    console.log("GET /api/mansion/featured called");
+    const featured = await MansionFeatured.findOne().lean();
+    console.log("Fetched mansion featured:", featured);
+    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
+      console.log("No mansion featured properties found, returning empty array");
+      return res.json([]);
+    }
+    console.log("Fetching properties with references:", featured.references);
+    const properties = await MansionDetail.find({
+      reference: { $in: featured.references },
+    }).lean();
+    console.log("Found properties:", properties);
+    const orderedProperties = featured.references
+      .map((ref) => properties.find((prop) => prop.reference === ref))
+      .filter((prop) => prop);
+    console.log("Returning ordered properties:", orderedProperties);
+    res.json(orderedProperties);
   } catch (error) {
-    console.error("Error fetching mansions:", error);
-    res.status(500).json({ message: "Failed to fetch mansions", error: error.message });
+    console.error("Error fetching mansion featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to fetch mansion featured properties", error: error.message });
   }
 });
 
+app.post("/api/mansion/featured", async (req, res) => {
+  try {
+    console.log("POST /api/mansion/featured called with:", req.body);
+    const { references } = req.body;
+    if (!references || !Array.isArray(references) || references.length === 0) {
+      return res.status(400).json({ error: "At least one reference number is required" });
+    }
+    const validReferences = [...new Set(references.filter((ref) => ref))];
+    if (validReferences.length > 4) {
+      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
+    }
+    for (const ref of validReferences) {
+      const property = await MansionDetail.findOne({ reference: ref }).lean();
+      if (!property) {
+        return res.status(400).json({ error: `Reference number ${ref} not found` });
+      }
+    }
+    const featured = await MansionFeatured.findOneAndUpdate(
+      {},
+      { references: validReferences },
+      { upsert: true, new: true, runValidators: true }
+    );
+    console.log("Saved mansion featured:", featured);
+    res.status(201).json({ message: "Mansion featured properties saved successfully", data: featured });
+  } catch (error) {
+    console.error("Error saving mansion featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to save mansion featured properties", error: error.message });
+  }
+});
+
+// Mansion ID Routes (Placed AFTER /api/mansion/featured)
 app.get("/api/mansion/:id", async (req, res) => {
   try {
-    const mansion = await Mansion.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/mansion/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const mansion = await Mansion.findById(id).lean();
     if (!mansion) return res.status(404).json({ message: "Mansion not found" });
     res.json(mansion);
   } catch (error) {
@@ -494,11 +554,27 @@ app.get("/api/mansion/:id", async (req, res) => {
   }
 });
 
+app.get("/api/mansions", async (req, res) => {
+  try {
+    console.log("GET /api/mansions called");
+    const mansions = await Mansion.find().sort({ createdAt: -1 }).lean();
+    res.json(mansions);
+  } catch (error) {
+    console.error("Error fetching mansions:", error);
+    res.status(500).json({ message: "Failed to fetch mansions", error: error.message });
+  }
+});
+
 app.put("/api/mansion/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { description, btntext } = req.body;
+    console.log(`PUT /api/mansion/${id} called with:`, { description, btntext });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const mansion = await Mansion.findByIdAndUpdate(
-      req.params.id,
+      id,
       { description, btntext },
       { new: true, runValidators: true }
     );
@@ -512,7 +588,12 @@ app.put("/api/mansion/:id", async (req, res) => {
 
 app.delete("/api/mansion/:id", async (req, res) => {
   try {
-    const mansion = await Mansion.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/mansion/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const mansion = await Mansion.findByIdAndDelete(id);
     if (!mansion) return res.status(404).json({ message: "Mansion not found" });
     res.json({ message: "Mansion deleted successfully" });
   } catch (error) {
@@ -525,12 +606,13 @@ app.delete("/api/mansion/:id", async (req, res) => {
 app.post("/api/penthouse", async (req, res) => {
   try {
     const { description, btntext } = req.body;
+    console.log("POST /api/penthouse received:", { description, btntext });
     if (!description || !btntext) {
       return res.status(400).json({ error: "All fields are required" });
     }
-
     const newPenthouse = new Penthouse({ description, btntext });
     await newPenthouse.save();
+    console.log("Saved penthouse content:", newPenthouse);
     res.status(201).json({ message: "Penthouse content added successfully", data: newPenthouse });
   } catch (error) {
     console.error("Error saving penthouse content:", error);
@@ -540,7 +622,9 @@ app.post("/api/penthouse", async (req, res) => {
 
 app.get("/api/penthouse", async (req, res) => {
   try {
+    console.log("GET /api/penthouse called");
     const penthouseContent = await Penthouse.find().sort({ createdAt: -1 }).limit(1).lean();
+    console.log("Fetched penthouse content:", penthouseContent);
     res.json(penthouseContent[0] || {});
   } catch (error) {
     console.error("Error fetching penthouse content:", error);
@@ -548,8 +632,64 @@ app.get("/api/penthouse", async (req, res) => {
   }
 });
 
+app.get("/api/penthouse/featured", async (req, res) => {
+  try {
+    console.log("GET /api/penthouse/featured called");
+    const featured = await PenthouseFeatured.findOne().lean();
+    console.log("Fetched penthouse featured:", featured);
+    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
+      console.log("No penthouse featured properties found, returning empty array");
+      return res.json([]);
+    }
+    console.log("Fetching properties with references:", featured.references);
+    const properties = await MansionDetail.find({
+      reference: { $in: featured.references },
+    }).lean();
+    console.log("Found properties:", properties);
+    const orderedProperties = featured.references
+      .map((ref) => properties.find((prop) => prop.reference === ref))
+      .filter((prop) => prop);
+    console.log("Returning ordered properties:", orderedProperties);
+    res.json(orderedProperties);
+  } catch (error) {
+    console.error("Error fetching penthouse featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to fetch penthouse featured properties", error: error.message });
+  }
+});
+
+app.post("/api/penthouse/featured", async (req, res) => {
+  try {
+    console.log("POST /api/penthouse/featured called with:", req.body);
+    const { references } = req.body;
+    if (!references || !Array.isArray(references) || references.length === 0) {
+      return res.status(400).json({ error: "At least one reference number is required" });
+    }
+    const validReferences = [...new Set(references.filter((ref) => ref))];
+    if (validReferences.length > 4) {
+      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
+    }
+    for (const ref of validReferences) {
+      const property = await MansionDetail.findOne({ reference: ref }).lean();
+      if (!property) {
+        return res.status(400).json({ error: `Reference number ${ref} not found` });
+      }
+    }
+    const featured = await PenthouseFeatured.findOneAndUpdate(
+      {},
+      { references: validReferences },
+      { upsert: true, new: true, runValidators: true }
+    );
+    console.log("Saved penthouse featured:", featured);
+    res.status(201).json({ message: "Penthouse featured properties saved successfully", data: featured });
+  } catch (error) {
+    console.error("Error saving penthouse featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to save penthouse featured properties", error: error.message });
+  }
+});
+
 app.get("/api/penthouses", async (req, res) => {
   try {
+    console.log("GET /api/penthouses called");
     const penthouses = await Penthouse.find().sort({ createdAt: -1 }).lean();
     res.json(penthouses);
   } catch (error) {
@@ -560,7 +700,12 @@ app.get("/api/penthouses", async (req, res) => {
 
 app.get("/api/penthouse/:id", async (req, res) => {
   try {
-    const penthouse = await Penthouse.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/penthouse/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const penthouse = await Penthouse.findById(id).lean();
     if (!penthouse) return res.status(404).json({ message: "Penthouse not found" });
     res.json(penthouse);
   } catch (error) {
@@ -571,9 +716,14 @@ app.get("/api/penthouse/:id", async (req, res) => {
 
 app.put("/api/penthouse/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { description, btntext } = req.body;
+    console.log(`PUT /api/penthouse/${id} called with:`, { description, btntext });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const penthouse = await Penthouse.findByIdAndUpdate(
-      req.params.id,
+      id,
       { description, btntext },
       { new: true, runValidators: true }
     );
@@ -587,7 +737,12 @@ app.put("/api/penthouse/:id", async (req, res) => {
 
 app.delete("/api/penthouse/:id", async (req, res) => {
   try {
-    const penthouse = await Penthouse.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/penthouse/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const penthouse = await Penthouse.findByIdAndDelete(id);
     if (!penthouse) return res.status(404).json({ message: "Penthouse not found" });
     res.json({ message: "Penthouse deleted successfully" });
   } catch (error) {
@@ -600,12 +755,13 @@ app.delete("/api/penthouse/:id", async (req, res) => {
 app.post("/api/collectibles", async (req, res) => {
   try {
     const { description, btntext } = req.body;
+    console.log("POST /api/collectibles received:", { description, btntext });
     if (!description || !btntext) {
       return res.status(400).json({ error: "All fields are required" });
     }
-
     const newCollection = new Collection({ description, btntext });
     await newCollection.save();
+    console.log("Saved collection content:", newCollection);
     res.status(201).json({ message: "Collection added successfully", data: newCollection });
   } catch (error) {
     console.error("Error adding collection:", error);
@@ -615,7 +771,9 @@ app.post("/api/collectibles", async (req, res) => {
 
 app.get("/api/collectibles", async (req, res) => {
   try {
+    console.log("GET /api/collectibles called");
     const collectionContent = await Collection.find().sort({ createdAt: -1 }).limit(1).lean();
+    console.log("Fetched collection content:", collectionContent);
     res.json(collectionContent[0] || {});
   } catch (error) {
     console.error("Error fetching collection content:", error);
@@ -623,8 +781,64 @@ app.get("/api/collectibles", async (req, res) => {
   }
 });
 
+app.get("/api/collectibles/featured", async (req, res) => {
+  try {
+    console.log("GET /api/collectibles/featured called");
+    const featured = await CollectiblesFeatured.findOne().lean();
+    console.log("Fetched collectibles featured:", featured);
+    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
+      console.log("No collectibles featured properties found, returning empty array");
+      return res.json([]);
+    }
+    console.log("Fetching properties with references:", featured.references);
+    const properties = await MansionDetail.find({
+      reference: { $in: featured.references },
+    }).lean();
+    console.log("Found properties:", properties);
+    const orderedProperties = featured.references
+      .map((ref) => properties.find((prop) => prop.reference === ref))
+      .filter((prop) => prop);
+    console.log("Returning ordered properties:", orderedProperties);
+    res.json(orderedProperties);
+  } catch (error) {
+    console.error("Error fetching collectibles featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to fetch collectibles featured properties", error: error.message });
+  }
+});
+
+app.post("/api/collectibles/featured", async (req, res) => {
+  try {
+    console.log("POST /api/collectibles/featured called with:", req.body);
+    const { references } = req.body;
+    if (!references || !Array.isArray(references) || references.length === 0) {
+      return res.status(400).json({ error: "At least one reference number is required" });
+    }
+    const validReferences = [...new Set(references.filter((ref) => ref))];
+    if (validReferences.length > 4) {
+      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
+    }
+    for (const ref of validReferences) {
+      const property = await MansionDetail.findOne({ reference: ref }).lean();
+      if (!property) {
+        return res.status(400).json({ error: `Reference number ${ref} not found` });
+      }
+    }
+    const featured = await CollectiblesFeatured.findOneAndUpdate(
+      {},
+      { references: validReferences },
+      { upsert: true, new: true, runValidators: true }
+    );
+    console.log("Saved collectibles featured:", featured);
+    res.status(201).json({ message: "Collectibles featured properties saved successfully", data: featured });
+  } catch (error) {
+    console.error("Error saving collectibles featured properties:", error.stack);
+    res.status(500).json({ message: "Failed to save collectibles featured properties", error: error.message });
+  }
+});
+
 app.get("/api/collections", async (req, res) => {
   try {
+    console.log("GET /api/collections called");
     const collections = await Collection.find().sort({ createdAt: -1 }).lean();
     res.json(collections);
   } catch (error) {
@@ -635,7 +849,12 @@ app.get("/api/collections", async (req, res) => {
 
 app.get("/api/collectibles/:id", async (req, res) => {
   try {
-    const collection = await Collection.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/collectibles/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const collection = await Collection.findById(id).lean();
     if (!collection) return res.status(404).json({ message: "Collection not found" });
     res.json(collection);
   } catch (error) {
@@ -646,9 +865,14 @@ app.get("/api/collectibles/:id", async (req, res) => {
 
 app.put("/api/collectibles/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { description, btntext } = req.body;
+    console.log(`PUT /api/collectibles/${id} called with:`, { description, btntext });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const collection = await Collection.findByIdAndUpdate(
-      req.params.id,
+      id,
       { description, btntext },
       { new: true, runValidators: true }
     );
@@ -662,7 +886,12 @@ app.put("/api/collectibles/:id", async (req, res) => {
 
 app.delete("/api/collectibles/:id", async (req, res) => {
   try {
-    const collection = await Collection.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/collectibles/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const collection = await Collection.findByIdAndDelete(id);
     if (!collection) return res.status(404).json({ message: "Collection not found" });
     res.json({ message: "Collection deleted successfully" });
   } catch (error) {
@@ -676,11 +905,9 @@ app.post("/api/magazine", upload.single("image"), async (req, res) => {
   try {
     const { heading, subheading } = req.body;
     const imagePath = req.file?.path;
-
     if (!heading || !subheading || !imagePath) {
       return res.status(400).json({ error: "All fields are required" });
     }
-
     const newMagazine = new Magazine({ heading, subheading, image: imagePath });
     await newMagazine.save();
     res.status(201).json({ message: "Magazine content added successfully", data: newMagazine });
@@ -692,6 +919,7 @@ app.post("/api/magazine", upload.single("image"), async (req, res) => {
 
 app.get("/api/magazine", async (req, res) => {
   try {
+    console.log("GET /api/magazine called");
     const magazineContent = await Magazine.find().sort({ createdAt: -1 }).limit(1).lean();
     res.json(magazineContent[0] || {});
   } catch (error) {
@@ -702,6 +930,7 @@ app.get("/api/magazine", async (req, res) => {
 
 app.get("/api/magazines", async (req, res) => {
   try {
+    console.log("GET /api/magazines called");
     const magazines = await Magazine.find().sort({ createdAt: -1 }).lean();
     res.json(magazines);
   } catch (error) {
@@ -712,7 +941,12 @@ app.get("/api/magazines", async (req, res) => {
 
 app.get("/api/magazine/:id", async (req, res) => {
   try {
-    const magazine = await Magazine.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/magazine/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazine = await Magazine.findById(id).lean();
     if (!magazine) return res.status(404).json({ message: "Magazine not found" });
     res.json(magazine);
   } catch (error) {
@@ -723,13 +957,16 @@ app.get("/api/magazine/:id", async (req, res) => {
 
 app.put("/api/magazine/:id", upload.single("image"), async (req, res) => {
   try {
+    const { id } = req.params;
     const { heading, subheading } = req.body;
     const imagePath = req.file?.path;
-
+    console.log(`PUT /api/magazine/${id} called with:`, { heading, subheading });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const updateData = { heading, subheading };
     if (imagePath) updateData.image = imagePath;
-
-    const magazine = await Magazine.findByIdAndUpdate(req.params.id, updateData, {
+    const magazine = await Magazine.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -743,7 +980,12 @@ app.put("/api/magazine/:id", upload.single("image"), async (req, res) => {
 
 app.delete("/api/magazine/:id", async (req, res) => {
   try {
-    const magazine = await Magazine.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/magazine/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazine = await Magazine.findByIdAndDelete(id);
     if (!magazine) return res.status(404).json({ message: "Magazine not found" });
     res.json({ message: "Magazine deleted successfully" });
   } catch (error) {
@@ -756,29 +998,26 @@ app.delete("/api/magazine/:id", async (req, res) => {
 app.post("/api/propertyDetail", propertyUpload, async (req, res) => {
   try {
     const { reference, ...propertyData } = req.body;
-
+    console.log("POST /api/propertyDetail called with reference:", reference);
     const existingProperty = await MansionDetail.findOne({ reference });
     if (existingProperty) {
       return res.status(400).json({ message: "Property with this reference already exists" });
     }
-
     const filePaths = {
       image: req.files["image"]?.[0]?.path,
       video: req.files["video"]?.[0]?.path,
       agentimage: req.files["agentimage"]?.[0]?.path,
     };
-
     if (!filePaths.image || !filePaths.agentimage) {
       return res.status(400).json({ message: "Image and agent image are required" });
     }
-
     const newProperty = new MansionDetail({
       reference,
       ...propertyData,
       ...filePaths,
     });
-
     await newProperty.save();
+    console.log("Saved property:", newProperty);
     res.status(201).json({ message: "Property saved successfully", data: newProperty });
   } catch (error) {
     console.error("Error saving property:", error);
@@ -792,6 +1031,7 @@ app.post("/api/propertyDetail", propertyUpload, async (req, res) => {
 
 app.get("/api/properties", async (req, res) => {
   try {
+    console.log("GET /api/properties called");
     const properties = await MansionDetail.find().sort({ createdAt: -1 }).lean();
     res.json(properties);
   } catch (error) {
@@ -802,7 +1042,9 @@ app.get("/api/properties", async (req, res) => {
 
 app.get("/api/mansions/:reference", async (req, res) => {
   try {
-    const property = await MansionDetail.findOne({ reference: req.params.reference }).lean();
+    const { reference } = req.params;
+    console.log(`GET /api/mansions/${reference} called`);
+    const property = await MansionDetail.findOne({ reference }).lean();
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
@@ -815,7 +1057,12 @@ app.get("/api/mansions/:reference", async (req, res) => {
 
 app.get("/api/propertyDetail/:id", async (req, res) => {
   try {
-    const property = await MansionDetail.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/propertyDetail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const property = await MansionDetail.findById(id).lean();
     if (!property) return res.status(404).json({ message: "Property not found" });
     res.json(property);
   } catch (error) {
@@ -826,25 +1073,26 @@ app.get("/api/propertyDetail/:id", async (req, res) => {
 
 app.put("/api/propertyDetail/:id", propertyUpload, async (req, res) => {
   try {
+    const { id } = req.params;
     const { reference, ...propertyData } = req.body;
-
-    const existingProperty = await MansionDetail.findOne({ reference, _id: { $ne: req.params.id } });
+    console.log(`PUT /api/propertyDetail/${id} called with reference:`, reference);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const existingProperty = await MansionDetail.findOne({ reference, _id: { $ne: id } });
     if (existingProperty) {
       return res.status(400).json({ message: "Property with this reference already exists" });
     }
-
     const filePaths = {
       image: req.files["image"]?.[0]?.path,
       video: req.files["video"]?.[0]?.path,
       agentimage: req.files["agentimage"]?.[0]?.path,
     };
-
     const updateData = { reference, ...propertyData, ...filePaths };
     Object.keys(filePaths).forEach((key) => {
       if (!filePaths[key]) delete updateData[key];
     });
-
-    const property = await MansionDetail.findByIdAndUpdate(req.params.id, updateData, {
+    const property = await MansionDetail.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -862,7 +1110,12 @@ app.put("/api/propertyDetail/:id", propertyUpload, async (req, res) => {
 
 app.delete("/api/propertyDetail/:id", async (req, res) => {
   try {
-    const property = await MansionDetail.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/propertyDetail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const property = await MansionDetail.findByIdAndDelete(id);
     if (!property) return res.status(404).json({ message: "Property not found" });
     res.json({ message: "Property deleted successfully" });
   } catch (error) {
@@ -876,11 +1129,10 @@ app.post("/api/magazineDetail", upload.single("mainImage"), async (req, res) => 
   try {
     const { author, title, subtitle, time, content, category } = req.body;
     const mainImage = req.file?.path;
-
+    console.log("POST /api/magazineDetail called with:", { author, title, category });
     if (!author || !title || !time || !content || !category) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-
     const newMagazineDetail = new MagazineDetail({
       author,
       title,
@@ -895,7 +1147,7 @@ app.post("/api/magazineDetail", upload.single("mainImage"), async (req, res) => 
   } catch (error) {
     console.error("Error saving magazine article:", error);
     if (error.name === "ValidationError") {
-      return res.status(400).json({ error: Object.values(error.errors).map(e => e.message).join(", ") });
+      return res.status(400).json({ error: Object.values(error.errors).map((e) => e.message).join(", ") });
     }
     res.status(500).json({ message: "Failed to add magazine article", error: error.message });
   }
@@ -903,6 +1155,7 @@ app.post("/api/magazineDetail", upload.single("mainImage"), async (req, res) => 
 
 app.get("/api/magazineDetails", async (req, res) => {
   try {
+    console.log("GET /api/magazineDetails called");
     const magazineDetails = await MagazineDetail.find().sort({ createdAt: -1 }).lean();
     res.json(magazineDetails);
   } catch (error) {
@@ -913,7 +1166,12 @@ app.get("/api/magazineDetails", async (req, res) => {
 
 app.get("/api/magazineDetail/:id", async (req, res) => {
   try {
-    const magazineDetail = await MagazineDetail.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/magazineDetail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazineDetail = await MagazineDetail.findById(id).lean();
     if (!magazineDetail) return res.status(404).json({ message: "Magazine article not found" });
     res.json(magazineDetail);
   } catch (error) {
@@ -924,13 +1182,16 @@ app.get("/api/magazineDetail/:id", async (req, res) => {
 
 app.put("/api/magazineDetail/:id", upload.single("mainImage"), async (req, res) => {
   try {
+    const { id } = req.params;
     const { author, title, subtitle, time, content, category } = req.body;
     const mainImage = req.file?.path;
-
+    console.log(`PUT /api/magazineDetail/${id} called with:`, { author, title, category });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const updateData = { author, title, subtitle, time, content, category };
     if (mainImage) updateData.mainImage = mainImage;
-
-    const magazineDetail = await MagazineDetail.findByIdAndUpdate(req.params.id, updateData, {
+    const magazineDetail = await MagazineDetail.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -944,7 +1205,12 @@ app.put("/api/magazineDetail/:id", upload.single("mainImage"), async (req, res) 
 
 app.delete("/api/magazineDetail/:id", async (req, res) => {
   try {
-    const magazineDetail = await MagazineDetail.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/magazineDetail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazineDetail = await MagazineDetail.findByIdAndDelete(id);
     if (!magazineDetail) return res.status(404).json({ message: "Magazine article not found" });
     res.json({ message: "Magazine article deleted successfully" });
   } catch (error) {
@@ -957,10 +1223,10 @@ app.delete("/api/magazineDetail/:id", async (req, res) => {
 app.post("/api/newsletter", async (req, res) => {
   try {
     const { email, category } = req.body;
+    console.log("POST /api/newsletter called with:", { email, category });
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
-
     const newNewsletter = new Newsletter({ email, category: category || "Newsletter" });
     await newNewsletter.save();
     res.status(201).json({ message: "Email added to newsletter successfully" });
@@ -972,6 +1238,7 @@ app.post("/api/newsletter", async (req, res) => {
 
 app.get("/api/newsletter", async (req, res) => {
   try {
+    console.log("GET /api/newsletter called");
     const newsletter = await Newsletter.find().sort({ createdAt: -1 }).lean();
     res.json(newsletter);
   } catch (error) {
@@ -982,7 +1249,12 @@ app.get("/api/newsletter", async (req, res) => {
 
 app.get("/api/newsletter/:id", async (req, res) => {
   try {
-    const newsletter = await Newsletter.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/newsletter/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const newsletter = await Newsletter.findById(id).lean();
     if (!newsletter) return res.status(404).json({ message: "Newsletter entry not found" });
     res.json(newsletter);
   } catch (error) {
@@ -993,11 +1265,15 @@ app.get("/api/newsletter/:id", async (req, res) => {
 
 app.put("/api/newsletter/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { email, category } = req.body;
+    console.log(`PUT /api/newsletter/${id} called with:`, { email, category });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     if (!email) return res.status(400).json({ error: "Email is required" });
-
     const newsletter = await Newsletter.findByIdAndUpdate(
-      req.params.id,
+      id,
       { email, category },
       { new: true, runValidators: true }
     );
@@ -1011,7 +1287,12 @@ app.put("/api/newsletter/:id", async (req, res) => {
 
 app.delete("/api/newsletter/:id", async (req, res) => {
   try {
-    const newsletter = await Newsletter.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/newsletter/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const newsletter = await Newsletter.findByIdAndDelete(id);
     if (!newsletter) return res.status(404).json({ message: "Newsletter entry not found" });
     res.json({ message: "Newsletter entry deleted successfully" });
   } catch (error) {
@@ -1024,10 +1305,10 @@ app.delete("/api/newsletter/:id", async (req, res) => {
 app.post("/api/magazineEmail", async (req, res) => {
   try {
     const { email } = req.body;
+    console.log("POST /api/magazineEmail called with:", { email });
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
-
     const newMagazineEmail = new MagazineEmail({ email });
     await newMagazineEmail.save();
     res.status(201).json({ message: "Email added to magazine email list successfully" });
@@ -1039,6 +1320,7 @@ app.post("/api/magazineEmail", async (req, res) => {
 
 app.get("/api/magazineEmail", async (req, res) => {
   try {
+    console.log("GET /api/magazineEmail called");
     const magazineEmail = await MagazineEmail.find().sort({ createdAt: -1 }).lean();
     res.json(magazineEmail);
   } catch (error) {
@@ -1049,7 +1331,12 @@ app.get("/api/magazineEmail", async (req, res) => {
 
 app.get("/api/magazineEmail/:id", async (req, res) => {
   try {
-    const magazineEmail = await MagazineEmail.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/magazineEmail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazineEmail = await MagazineEmail.findById(id).lean();
     if (!magazineEmail) return res.status(404).json({ message: "Magazine email entry not found" });
     res.json(magazineEmail);
   } catch (error) {
@@ -1060,11 +1347,15 @@ app.get("/api/magazineEmail/:id", async (req, res) => {
 
 app.put("/api/magazineEmail/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { email } = req.body;
+    console.log(`PUT /api/magazineEmail/${id} called with:`, { email });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     if (!email) return res.status(400).json({ error: "Email is required" });
-
     const magazineEmail = await MagazineEmail.findByIdAndUpdate(
-      req.params.id,
+      id,
       { email },
       { new: true, runValidators: true }
     );
@@ -1078,7 +1369,12 @@ app.put("/api/magazineEmail/:id", async (req, res) => {
 
 app.delete("/api/magazineEmail/:id", async (req, res) => {
   try {
-    const magazineEmail = await MagazineEmail.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/magazineEmail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const magazineEmail = await MagazineEmail.findByIdAndDelete(id);
     if (!magazineEmail) return res.status(404).json({ message: "Magazine email entry not found" });
     res.json({ message: "Magazine email entry deleted successfully" });
   } catch (error) {
@@ -1091,10 +1387,10 @@ app.delete("/api/magazineEmail/:id", async (req, res) => {
 app.post("/api/inquiries", async (req, res) => {
   try {
     const { firstName, lastName, email, phone, message } = req.body;
+    console.log("POST /api/inquiries called with:", { firstName, lastName, email });
     if (!firstName || !lastName || !email || !message) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-
     const newInquiry = new Inquiry({ firstName, lastName, email, phone, message });
     await newInquiry.save();
     res.status(201).json({ message: "Inquiry submitted successfully", data: newInquiry });
@@ -1106,6 +1402,7 @@ app.post("/api/inquiries", async (req, res) => {
 
 app.get("/api/inquiries", async (req, res) => {
   try {
+    console.log("GET /api/inquiries called");
     const inquiries = await Inquiry.find().sort({ createdAt: -1 }).lean();
     res.json(inquiries);
   } catch (error) {
@@ -1116,7 +1413,12 @@ app.get("/api/inquiries", async (req, res) => {
 
 app.get("/api/inquiries/:id", async (req, res) => {
   try {
-    const inquiry = await Inquiry.findById(req.params.id).lean();
+    const { id } = req.params;
+    console.log(`GET /api/inquiries/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const inquiry = await Inquiry.findById(id).lean();
     if (!inquiry) return res.status(404).json({ message: "Inquiry not found" });
     res.json(inquiry);
   } catch (error) {
@@ -1127,9 +1429,14 @@ app.get("/api/inquiries/:id", async (req, res) => {
 
 app.put("/api/inquiries/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const { firstName, lastName, email, phone, message } = req.body;
+    console.log(`PUT /api/inquiries/${id} called with:`, { firstName, lastName, email });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
     const inquiry = await Inquiry.findByIdAndUpdate(
-      req.params.id,
+      id,
       { firstName, lastName, email, phone, message },
       { new: true, runValidators: true }
     );
@@ -1143,7 +1450,12 @@ app.put("/api/inquiries/:id", async (req, res) => {
 
 app.delete("/api/inquiries/:id", async (req, res) => {
   try {
-    const inquiry = await Inquiry.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    console.log(`DELETE /api/inquiries/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const inquiry = await Inquiry.findByIdAndDelete(id);
     if (!inquiry) return res.status(404).json({ message: "Inquiry not found" });
     res.json({ message: "Inquiry deleted successfully" });
   } catch (error) {
@@ -1155,276 +1467,56 @@ app.delete("/api/inquiries/:id", async (req, res) => {
 // Featured Properties
 app.post("/api/featured", async (req, res) => {
   try {
+    console.log("POST /api/featured called with:", req.body);
     const { references } = req.body;
-
     if (!references || !Array.isArray(references) || references.length === 0) {
       return res.status(400).json({ error: "At least one reference number is required" });
     }
-
-    const validReferences = [...new Set(references.filter(ref => ref))];
+    const validReferences = [...new Set(references.filter((ref) => ref))];
     if (validReferences.length > 4) {
       return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
     }
-
     for (const ref of validReferences) {
       const property = await MansionDetail.findOne({ reference: ref }).lean();
       if (!property) {
         return res.status(400).json({ error: `Reference number ${ref} not found` });
       }
     }
-
     const featured = await FeaturedProperties.findOneAndUpdate(
       {},
       { references: validReferences },
       { upsert: true, new: true, runValidators: true }
     );
-
+    console.log("Saved featured properties:", featured);
     res.status(201).json({ message: "Featured properties saved successfully", data: featured });
   } catch (error) {
-    console.error("Error saving featured properties:", error);
+    console.error("Error saving featured properties:", error.stack);
     res.status(500).json({ message: "Failed to save featured properties", error: error.message });
   }
 });
 
 app.get("/api/featured", async (req, res) => {
   try {
-    console.log("Fetching featured properties...");
+    console.log("GET /api/featured called");
     const featured = await FeaturedProperties.findOne().lean();
+    console.log("Fetched featured:", featured);
     if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
       console.log("No featured properties found, returning empty array");
       return res.json([]);
     }
-
     console.log("Fetching properties with references:", featured.references);
-    const properties = await MansionDetail.find(
-      { reference: { $in: featured.references } },
-      {
-        reference: 1,
-        title: 1,
-        image: 1,
-        price: 1,
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 1,
-      }
-    ).lean();
-
-    console.log("Found properties:", properties.length);
+    const properties = await MansionDetail.find({
+      reference: { $in: featured.references },
+    }).lean();
+    console.log("Found properties:", properties);
     const orderedProperties = featured.references
-      .map(ref => properties.find(prop => prop.reference === ref))
-      .filter(prop => prop);
-
+      .map((ref) => properties.find((prop) => prop.reference === ref))
+      .filter((prop) => prop);
+    console.log("Returning ordered properties:", orderedProperties);
     res.json(orderedProperties);
   } catch (error) {
     console.error("Error fetching featured properties:", error.stack);
     res.status(500).json({ message: "Failed to fetch featured properties", error: error.message });
-  }
-});
-
-// Mansion Featured
-app.post("/api/mansion/featured", async (req, res) => {
-  try {
-    const { references } = req.body;
-
-    if (!references || !Array.isArray(references) || references.length === 0) {
-      return res.status(400).json({ error: "At least one reference number is required" });
-    }
-
-    const validReferences = [...new Set(references.filter(ref => ref))];
-    if (validReferences.length > 4) {
-      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
-    }
-
-    for (const ref of validReferences) {
-      const property = await MansionDetail.findOne({ reference: ref }).lean();
-      if (!property) {
-        return res.status(400).json({ error: `Reference number ${ref} not found` });
-      }
-    }
-
-    const featured = await MansionFeatured.findOneAndUpdate(
-      {},
-      { references: validReferences },
-      { upsert: true, new: true, runValidators: true }
-    );
-
-    res.status(201).json({ message: "Mansion featured properties saved successfully", data: featured });
-  } catch (error) {
-    console.error("Error saving mansion featured properties:", error);
-    res.status(500).json({ message: "Failed to save mansion featured properties", error: error.message });
-  }
-});
-
-app.get("/api/mansion/featured", async (req, res) => {
-  try {
-    console.log("Fetching mansion featured properties...");
-    const featured = await MansionFeatured.findOne().lean();
-    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
-      console.log("No mansion featured properties found, returning empty array");
-      return res.json([]);
-    }
-
-    console.log("Fetching properties with references:", featured.references);
-    const properties = await MansionDetail.find(
-      { reference: { $in: featured.references } },
-      {
-        reference: 1,
-        title: 1,
-        image: 1,
-        price: 1,
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 1,
-      }
-    ).lean();
-
-    console.log("Found properties:", properties.length);
-    const orderedProperties = featured.references
-      .map(ref => properties.find(prop => prop.reference === ref))
-      .filter(prop => prop);
-
-    res.json(orderedProperties);
-  } catch (error) {
-    console.error("Error fetching mansion featured properties:", error.stack);
-    res.status(500).json({ message: "Failed to fetch mansion featured properties", error: error.message });
-  }
-});
-
-// Penthouse Featured
-app.post("/api/penthouse/featured", async (req, res) => {
-  try {
-    const { references } = req.body;
-
-    if (!references || !Array.isArray(references) || references.length === 0) {
-      return res.status(400).json({ error: "At least one reference number is required" });
-    }
-
-    const validReferences = [...new Set(references.filter(ref => ref))];
-    if (validReferences.length > 4) {
-      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
-    }
-
-    for (const ref of validReferences) {
-      const property = await MansionDetail.findOne({ reference: ref }).lean();
-      if (!property) {
-        return res.status(400).json({ error: `Reference number ${ref} not found` });
-      }
-    }
-
-    const featured = await PenthouseFeatured.findOneAndUpdate(
-      {},
-      { references: validReferences },
-      { upsert: true, new: true, runValidators: true }
-    );
-
-    res.status(201).json({ message: "Penthouse featured properties saved successfully", data: featured });
-  } catch (error) {
-    console.error("Error saving penthouse featured properties:", error);
-    res.status(500).json({ message: "Failed to save penthouse featured properties", error: error.message });
-  }
-});
-
-app.get("/api/penthouse/featured", async (req, res) => {
-  try {
-    console.log("Fetching penthouse featured properties...");
-    const featured = await PenthouseFeatured.findOne().lean();
-    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
-      console.log("No penthouse featured properties found, returning empty array");
-      return res.json([]);
-    }
-
-    console.log("Fetching properties with references:", featured.references);
-    const properties = await MansionDetail.find(
-      { reference: { $in: featured.references } },
-      {
-        reference: 1,
-        title: 1,
-        image: 1,
-        price: 1,
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 1,
-      }
-    ).lean();
-
-    console.log("Found properties:", properties.length);
-    const orderedProperties = featured.references
-      .map(ref => properties.find(prop => prop.reference === ref))
-      .filter(prop => prop);
-
-    res.json(orderedProperties);
-  } catch (error) {
-    console.error("Error fetching penthouse featured properties:", error.stack);
-    res.status(500).json({ message: "Failed to fetch penthouse featured properties", error: error.message });
-  }
-});
-
-// Collectibles Featured
-app.post("/api/collectibles/featured", async (req, res) => {
-  try {
-    const { references } = req.body;
-
-    if (!references || !Array.isArray(references) || references.length === 0) {
-      return res.status(400).json({ error: "At least one reference number is required" });
-    }
-
-    const validReferences = [...new Set(references.filter(ref => ref))];
-    if (validReferences.length > 4) {
-      return res.status(400).json({ error: "Maximum of four reference numbers allowed" });
-    }
-
-    for (const ref of validReferences) {
-      const property = await MansionDetail.findOne({ reference: ref }).lean();
-      if (!property) {
-        return res.status(400).json({ error: `Reference number ${ref} not found` });
-      }
-    }
-
-    const featured = await CollectiblesFeatured.findOneAndUpdate(
-      {},
-      { references: validReferences },
-      { upsert: true, new: true, runValidators: true }
-    );
-
-    res.status(201).json({ message: "Collectibles featured properties saved successfully", data: featured });
-  } catch (error) {
-    console.error("Error saving collectibles featured properties:", error);
-    res.status(500).json({ message: "Failed to save collectibles featured properties", error: error.message });
-  }
-});
-
-app.get("/api/collectibles/featured", async (req, res) => {
-  try {
-    console.log("Fetching collectibles featured properties...");
-    const featured = await CollectiblesFeatured.findOne().lean();
-    if (!featured || !Array.isArray(featured.references) || !featured.references.length) {
-      console.log("No collectibles featured properties found, returning empty array");
-      return res.json([]);
-    }
-
-    console.log("Fetching properties with references:", featured.references);
-    const properties = await MansionDetail.find(
-      { reference: { $in: featured.references } },
-      {
-        reference: 1,
-        title: 1,
-        image: 1,
-        price: 1,
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 1,
-      }
-    ).lean();
-
-    console.log("Found properties:", properties.length);
-    const orderedProperties = featured.references
-      .map(ref => properties.find(prop => prop.reference === ref))
-      .filter(prop => prop);
-
-    res.json(orderedProperties);
-  } catch (error) {
-    console.error("Error fetching collectibles featured properties:", error.stack);
-    res.status(500).json({ message: "Failed to fetch collectibles featured properties", error: error.message });
   }
 });
 

@@ -1,17 +1,19 @@
 import React from "react";
-import { useMansions } from "../context/MansionContext";
 import MansionCard from "./Card";
 
-const PenthouseList = () => {
-  const { mansions } = useMansions();
-
+const PenthouseList = ({ penthouses }) => {
   return (
-    <div className="flex flex-wrap gap-4 p-4">
-      {mansions.map((mansion) => (
-        mansion.propertytype === "Penthouse" ? (
-          <MansionCard key={mansion.reference} mansion={mansion} />
-        ) : null
-      ))}
+    <div className="flex flex-wrap gap-6 p-6 justify-center">
+      {/* Consistent card spacing and centered layout */}
+      {penthouses.length > 0 ? (
+        penthouses.map((penthouse) => (
+          <MansionCard key={penthouse.reference} mansion={penthouse} />
+        ))
+      ) : (
+        <p className="text-gray-600 text-center w-full text-lg">
+          No penthouses found matching your search.
+        </p>
+      )}
     </div>
   );
 };

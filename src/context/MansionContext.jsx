@@ -12,9 +12,14 @@ export const MansionProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
+
   const fetchMansions = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.com/api/properties');
+      const res = await axios.get(`${BASE_URL}/api/properties`);
       console.log('Fetched mansions:', res.data);
       setMansions(res.data);
     } catch (err) {
@@ -24,7 +29,7 @@ export const MansionProvider = ({ children }) => {
 
   const fetchFeaturedMansions = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.com/api/featured');
+      const res = await axios.get(`${BASE_URL}/api/featured`);
       console.log('Fetched featured mansions:', res.data);
       setFeaturedMansions(res.data);
     } catch (err) {
@@ -34,7 +39,7 @@ export const MansionProvider = ({ children }) => {
 
   const fetchMansionFeatured = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.com/api/mansion/featured');
+      const res = await axios.get(`${BASE_URL}/api/mansion/featured`);
       console.log('Fetched mansion featured:', res.data);
       setMansionFeatured(res.data);
     } catch (err) {
@@ -44,7 +49,7 @@ export const MansionProvider = ({ children }) => {
 
   const fetchPenthouseFeatured = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.com/api/penthouse/featured');
+      const res = await axios.get(`${BASE_URL}/api/penthouse/featured`);
       console.log('Fetched penthouse featured:', res.data);
       setPenthouseFeatured(res.data);
     } catch (err) {
@@ -54,7 +59,7 @@ export const MansionProvider = ({ children }) => {
 
   const fetchCollectiblesFeatured = async () => {
     try {
-      const res = await axios.get('https://backend-5kh4.onrender.com/api/collectibles/featured');
+      const res = await axios.get(`${BASE_URL}/api/collectibles/featured`);
       console.log('Fetched collectibles featured:', res.data);
       setCollectiblesFeatured(res.data);
     } catch (err) {

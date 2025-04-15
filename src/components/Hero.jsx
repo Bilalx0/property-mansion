@@ -7,10 +7,15 @@ const ResponsiveHero = () => {
   const [heroImage, setHeroImage] = useState("");
   const [subheading, setSubheading] = useState("");
 
+  const BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://backend-5kh4.onrender.com"
+      : "http://localhost:5001";
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("https://backend-5kh4.onrender.com/api/hero");
+        const response = await axios.get(`${BASE_URL}/api/hero`);
         console.log("API Response:", response.data);
 
         if (response.data) {

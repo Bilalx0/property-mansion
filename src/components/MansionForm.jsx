@@ -41,12 +41,17 @@ const MansionForm = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
+
   // Fetch existing data for editing
   useEffect(() => {
     if (id) {
       const fetchProperty = async () => {
         try {
-          const response = await axios.get(`https://backend-5kh4.onrender.com/api/propertyDetail/${id}`);
+          const response = await axios.get(`${BASE_URL}/api/propertyDetail/${id}`);
           const data = response.data;
           // Ensure amenities is a string (convert array if necessary)
           setMansionData({
@@ -107,13 +112,13 @@ const MansionForm = () => {
       let response;
       if (id) {
         // Update existing property
-        response = await axios.put(`https://backend-5kh4.onrender.com/api/propertyDetail/${id}`, formData, {
+        response = await axios.put(`${BASE_URL}/api/propertyDetail/${id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           timeout: 30000,
         });
       } else {
         // Create new property
-        response = await axios.post("https://backend-5kh4.onrender.com/api/propertyDetail", formData, {
+        response = await axios.post(`${BASE_URL}/api/propertyDetail`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           timeout: 30000,
         });

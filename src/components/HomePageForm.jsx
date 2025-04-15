@@ -51,6 +51,11 @@ const HomePageForm = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://backend-5kh4.onrender.com"
+      : "http://localhost:5001";
+
   const handleFeaturedSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -70,7 +75,7 @@ const HomePageForm = () => {
     }
 
     try {
-      const response = await axios.post('https://backend-5kh4.onrender.com/api/featured', {
+      const response = await axios.post(`${BASE_URL}/api/featured`, {
         references,
       });
 
@@ -110,7 +115,7 @@ const HomePageForm = () => {
     formData.append('image', heroData.image);
 
     try {
-      const response = await axios.post('https://backend-5kh4.onrender.com/api/hero', formData, {
+      const response = await axios.post(`${BASE_URL}/api/hero`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -150,14 +155,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('https://backend-5kh4.onrender.com/api/mansion', {
+      await axios.post(`${BASE_URL}/api/mansion`, {
         description: mansionData.description,
         btntext: mansionData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('https://backend-5kh4.onrender.com/api/mansion/featured', {
+        await axios.post(`${BASE_URL}/api/mansion/featured`, {
           references,
         });
       }
@@ -201,14 +206,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('https://backend-5kh4.onrender.com/api/penthouse', {
+      await axios.post(`${BASE_URL}/api/penthouse`, {
         description: penthouseData.description,
         btntext: penthouseData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('https://backend-5kh4.onrender.com/api/penthouse/featured', {
+        await axios.post(`${BASE_URL}/api/penthouse/featured`, {
           references,
         });
       }
@@ -252,14 +257,14 @@ const HomePageForm = () => {
 
     try {
       // Save description and btntext
-      await axios.post('https://backend-5kh4.onrender.com/api/collectibles', {
+      await axios.post(`${BASE_URL}/api/collectibles`, {
         description: collectiblesData.description,
         btntext: collectiblesData.btntext,
       });
 
       // Save references if provided
       if (references.length > 0) {
-        await axios.post('https://backend-5kh4.onrender.com/api/collectibles/featured', {
+        await axios.post(`${BASE_URL}/api/collectibles/featured`, {
           references,
         });
       }
@@ -300,7 +305,7 @@ const HomePageForm = () => {
     formData.append('image', magazineData.image);
 
     try {
-      const response = await axios.post('https://backend-5kh4.onrender.com/api/magazine', formData, {
+      const response = await axios.post(`${BASE_URL}/api/magazine`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

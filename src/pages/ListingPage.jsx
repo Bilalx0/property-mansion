@@ -52,6 +52,11 @@ const ListingPage = () => {
   
   // Scroll to top button visibility
   const [showScrollToTop, setShowScrollToTop] = useState(false);
+
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
   
   useEffect(() => {
     const handleScroll = () => {
@@ -151,7 +156,7 @@ const ListingPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("https://backend-5kh4.onrender.com/api/inquiries", {
+    const response = await fetch(`${BASE_URL}/api/inquiries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -231,7 +236,7 @@ const ListingPage = () => {
         {/* Main Hero Image and Property Title */}
         <div className="relative w-full h-[50vh] mb-8">
           <img
-            src={`https://backend-5kh4.onrender.com${property.image}`}
+            src={`${property.image}`}
             alt={property.title}
             className="w-full h-full object-cover"
           />
@@ -434,7 +439,7 @@ const ListingPage = () => {
                 </div>
                 {property.agentimage ? (
                   <img
-                    src={`https://backend-5kh4.onrender.com${property.agentimage}`}
+                    src={`${property.agentimage}`}
                     alt={property.agentname}
                     className="w-20 h-20 rounded-full object-cover"
                   />
@@ -545,7 +550,7 @@ const ListingPage = () => {
               </button>
               <div className="relative w-full h-64">
                 <img
-                  src={`http://localhost:5001${property.image}`}
+                  src={`${property.image}`}
                   alt={property.title}
                   className="w-full h-full object-cover mt-8"
                 />

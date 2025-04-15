@@ -17,18 +17,23 @@ const BlogPage = () => {
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
+
   useEffect(() => {
     const fetchMagazineDetail = async () => {
       try {
         // Fetch the specific article
         const detailResponse = await axios.get(
-          `https://backend-5kh4.onrender.com/api/magazineDetail/${id}`
+          `${BASE_URL}/api/magazineDetail/${id}`
         );
         setFeaturedArticle(detailResponse.data);
 
         // Fetch all articles for "Related Publishings"
         const allResponse = await axios.get(
-          "https://backend-5kh4.onrender.com/api/magazineDetails"
+          `${BASE_URL}/api/magazineDetails`
         );
         setMagazineDetails(allResponse.data.filter((article) => article._id !== id)); // Exclude the featured article
         setLoading(false);

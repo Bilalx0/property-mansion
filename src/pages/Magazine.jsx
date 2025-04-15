@@ -83,11 +83,16 @@ const Magazine = () => {
     },
   ];
 
+  const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-5kh4.onrender.com"
+    : "http://localhost:5001";
+
   useEffect(() => {
     const fetchMagazines = async () => {
       try {
         const response = await axios.get(
-          "https://backend-5kh4.onrender.com/api/magazineDetails"
+          `${BASE_URL}/api/magazineDetails`
         );
         // Ensure all fetched articles have a category; assign a default if missing
         const sanitizedMagazines = response.data.map((article) => ({
@@ -209,7 +214,7 @@ const Magazine = () => {
                   <img
                     src={
                       selectedArticle.mainImage
-                        ? `https://backend-5kh4.onrender.com${selectedArticle.mainImage}`
+                        ? `${selectedArticle.mainImage}`
                         : selectedArticle.image || newImage
                     }
                     alt="Main Article"
@@ -253,7 +258,7 @@ const Magazine = () => {
                       <img
                         src={
                           article.mainImage
-                            ? `https://backend-5kh4.onrender.com${article.mainImage}`
+                            ? `${article.mainImage}`
                             : article.image || newImage
                         }
                         alt={article.title}
@@ -312,7 +317,7 @@ const Magazine = () => {
                       <img
                         src={
                           article.mainImage
-                            ? `https://backend-5kh4.onrender.com${article.mainImage}`
+                            ? `${article.mainImage}`
                             : article.image || newImage
                         }
                         alt={article.title}
