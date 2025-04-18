@@ -1,11 +1,47 @@
 import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import logo from "../assests/TMM-LANDING PAGE 1.svg";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import MansionList from "./MansionList";
 
 const MansionMarket = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    bedrooms: "",
+    minPrice: "",
+    maxPrice: "",
+    minSize: "",
+    maxSize: "",
+    sortBy: "newest"
+  });
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      bedrooms: "",
+      minPrice: "",
+      maxPrice: "",
+      minSize: "",
+      maxSize: "",
+      sortBy: "newest"
+    });
+  };
 
   return (
     <div className="flex flex-col items-center px-4 md:px-10 lg:px-20 py-12 space-y-8">
@@ -20,12 +56,23 @@ const MansionMarket = () => {
               type="text"
               placeholder="Country, Area, District..."
               className="w-full px-4 py-2 text-[#000000] text-sm bg-[#f5f5f5] focus:outline-none"
+              value={searchQuery}
+              onChange={handleSearchChange}
             />
           </div>
 
           {/* Search Button */}
           <button className="bg-[#00603A] px-4 py-2 flex items-center justify-center border border-[#00603A] text-white hover:text-[#00603A] hover:bg-transparent transition">
             <FaSearch className="font-thin hover:text-[#00603A]" />
+          </button>
+
+          {/* Filter Button */}
+          <button 
+            className="bg-[#00603A] px-4 py-1 flex items-center justify-center border border-[#00603A] text-white hover:text-[#00603A] hover:bg-transparent transition"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <span className="mr-1">Filters</span>
+            <ChevronDown className="w-4 h-4" />
           </button>
 
           {/* Menu Icon (Visible on all screen sizes) */}
@@ -38,6 +85,111 @@ const MansionMarket = () => {
           </button>
         </div>
       </div>
+
+      {/* Filters Panel */}
+      {filtersOpen && (
+        <div className="w-full bg-white shadow-md rounded-md p-4 border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Bedrooms Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">Bedrooms</label>
+              <select
+                name="bedrooms"
+                value={filters.bedrooms}
+                onChange={handleFilterChange}
+                className="border border-gray-300 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+              >
+                <option value="">Any</option>
+                <option value="1">1+</option>
+                <option value="2">2+</option>
+                <option value="3">3+</option>
+                <option value="4">4+</option>
+                <option value="5">5+</option>
+                <option value="6">6+</option>
+              </select>
+            </div>
+
+            {/* Price Range */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">Price Range (USD)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  name="minPrice"
+                  placeholder="Min"
+                  value={filters.minPrice}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                />
+                <input
+                  type="number"
+                  name="maxPrice"
+                  placeholder="Max"
+                  value={filters.maxPrice}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                />
+              </div>
+            </div>
+
+            {/* Size Range */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">Size Range (sq.ft)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  name="minSize"
+                  placeholder="Min"
+                  value={filters.minSize}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                />
+                <input
+                  type="number"
+                  name="maxSize"
+                  placeholder="Max"
+                  value={filters.maxSize}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                />
+              </div>
+            </div>
+
+            {/* Sort By */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">Sort By</label>
+              <select
+                name="sortBy"
+                value={filters.sortBy}
+                onChange={handleFilterChange}
+                className="border border-gray-300 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+              >
+                <option value="newest">Newest</option>
+                <option value="price_low">Price (Low to High)</option>
+                <option value="price_high">Price (High to Low)</option>
+                <option value="size_low">Size (Small to Large)</option>
+                <option value="size_high">Size (Large to Small)</option>
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-end gap-2 col-span-1 md:col-span-2">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 border border-gray-300  text-gray-600 hover:bg-gray-100 transition"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="px-4 py-2 bg-[#00603A] text-white  hover:bg-[#004e30] transition"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Popup (Works on all screen sizes) */}
       {menuOpen && (
@@ -82,9 +234,10 @@ const MansionMarket = () => {
         ultra-luxury requirements, offering unparalleled elegance, opulence, and
         breathtaking views.
       </p>
-      <MansionList/>
+      
+      {/* Pass search query and filters to MansionList */}
+      <MansionList searchQuery={searchQuery} filters={filters} />
     </div>
-
   );
 };
 

@@ -8,6 +8,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://backend-5kh4.onrender.com"
+      : "http://localhost:5001";
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -16,18 +21,24 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-  
+
     try {
-      const response = await axios.post("https://backend-5kh4.onrender.com/api/auth/login", formData);
+      const response = await axios.post(`${BASE_URL}/api/auth/login`, formData);
+      console.log("API Response:", response.data); // Debug response
+      if (!response.data.token) {
+        throw new Error("No token received from server");
+      }
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("role", response.data.role);
-      localStorage.setItem("firstName", response.data.firstName || ""); 
-      localStorage.setItem("lastName", response.data.lastName || ""); 
+      localStorage.setItem("role", response.data.role || "");
+      localStorage.setItem("firstName", response.data.firstName || "");
+      localStorage.setItem("lastName", response.data.lastName || "");
+      console.log("Local Storage:", localStorage); // Debug localStorage
       setLoading(false);
       navigate("/dashboard");
     } catch (error) {
       setLoading(false);
-      setError(error.response?.data?.message || "Login failed");
+      console.error("Login Error:", error); // Debug error
+      setError(error.response?.data?.message || error.message || "Login failed");
     }
   };
 

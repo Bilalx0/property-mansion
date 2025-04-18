@@ -60,8 +60,7 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 const propertyUpload = upload.fields([
-  { name: "image", maxCount: 1 },
-  { name: "video", maxCount: 1 },
+  { name: "images", maxCount: 10 }, 
   { name: "agentimage", maxCount: 1 },
 ]);
 
@@ -156,30 +155,30 @@ const mansionDetailSchema = new mongoose.Schema(
     size: { type: String, required: true },
     bedrooms: { type: String, required: true },
     bathrooms: { type: String, required: true },
-    furnishingtype: { type: String, required: true },
-    builtuparea: { type: String, required: true },
-    projectstatus: { type: String, required: true },
+    furnishingtype: { type: String }, // Optional, as per frontend
+    builtuparea: { type: String }, // Optional
+    projectstatus: { type: String }, // Optional
     community: { type: String, required: true },
-    subcommunity: { type: String, required: true },
+    subcommunity: { type: String }, // Optional
     country: { type: String, required: true },
     price: { type: String, required: true },
     title: { type: String, required: true },
-    subtitle: { type: String, required: true },
+    subtitle: { type: String }, // Optional
     description: { type: String, required: true },
     amenities: { type: String, required: true },
-    image: { type: String, required: true },
-    video: { type: String, required: false },
+    images: [{ type: String }], // Changed from "image" to "images"
+    video: { type: String }, // Optional URL
     propertyaddress: { type: String, required: true },
-    unitno: { type: String, required: true },
-    tag: { type: String, required: true },
+    unitno: { type: String }, // Optional
+    tag: { type: String }, // Optional
     status: { type: String, required: true },
     agentname: { type: String, required: true },
-    designation: { type: String, required: true },
+    designation: { type: String }, // Optional
     email: { type: String, required: true },
     phone: { type: String, required: true },
-    whatsaapno: { type: String, required: true },
-    callno: { type: String, required: true },
-    agentimage: { type: String, required: true },
+    whatsaapno: { type: String }, // Optional
+    callno: { type: String }, // Optional
+    agentimage: { type: String }, // Optional, as per frontend
   },
   { timestamps: true }
 );
@@ -283,6 +282,122 @@ const MansionFeatured = mongoose.model("MansionFeatured", mansionFeaturedSchema)
 const PenthouseFeatured = mongoose.model("PenthouseFeatured", penthouseFeaturedSchema);
 const CollectiblesFeatured = mongoose.model("CollectiblesFeatured", collectiblesFeaturedSchema);
 
+const reviewSchema = new mongoose.Schema(
+  {
+    reviewerName: {
+      type: String,
+      required: [true, "Reviewer name is required"],
+      trim: true,
+      maxlength: [100, "Reviewer name cannot exceed 100 characters"],
+    },
+    company: {
+      type: String,
+      required: [true, "Company name is required"],
+      trim: true,
+      maxlength: [100, "Company name cannot exceed 100 characters"],
+    },
+    content: {
+      type: String,
+      required: [true, "Review content is required"],
+      trim: true,
+      maxlength: [500, "Review content cannot exceed 500 characters"],
+    },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true }
+);
+
+const Review = mongoose.model("Review", reviewSchema);
+
+// Review Routes
+app.post("/api/reviews", async (req, res) => {
+  try {
+    const { reviewerName, company, content, isApproved } = req.body;
+    if (!reviewerName || !company || !content) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const newReview = new Review({
+      reviewerName,
+      company,
+      content,
+      isApproved: isApproved || false,
+    });
+    await newReview.save();
+    res.status(201).json({ message: "Review added successfully", data: newReview });
+  } catch (error) {
+    console.error("Error adding review:", error);
+    res.status(500).json({ message: "Failed to add review", error: error.message });
+  }
+});
+
+app.get("/api/reviews/admin", async (req, res) => {
+  try {
+    const reviews = await Review.find()
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(reviews);
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    res.status(500).json({ message: "Failed to fetch reviews", error: error.message });
+  }
+});
+
+app.get("/api/reviews", async (req, res) => {
+  try {
+    const reviews = await Review.find({ isApproved: true })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(reviews);
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    res.status(500).json({ message: "Failed to fetch reviews", error: error.message });
+  }
+});
+
+app.put("/api/reviews/:id", async (req, res) => {
+  try {
+    const { reviewerName, company, content, isApproved } = req.body;
+    const reviewId = req.params.id;
+    if (!reviewerName || !company || !content) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const updatedReview = await Review.findByIdAndUpdate(
+      reviewId,
+      {
+        reviewerName,
+        company,
+        content,
+        isApproved: isApproved || false,
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+    res.json({ message: "Review updated successfully", data: updatedReview });
+  } catch (error) {
+    console.error("Error updating review:", error);
+    res.status(500).json({ message: "Failed to update review", error: error.message });
+  }
+});
+
+app.delete("/api/reviews/:id", async (req, res) => {
+  try {
+    const reviewId = req.params.id;
+    const deletedReview = await Review.findByIdAndDelete(reviewId);
+    if (!deletedReview) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+    res.json({ message: "Review deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    res.status(500).json({ message: "Failed to delete review", error: error.message });
+  }
+});
+
 // Authentication Routes
 app.post("/api/auth/signup", async (req, res) => {
   try {
@@ -333,13 +448,17 @@ app.post("/api/auth/login", async (req, res) => {
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    res.json({ token, role: user.role });
+    res.json({
+      token,
+      role: user.role,
+      firstName: user.firstName, // Added
+      lastName: user.lastName,  // Added
+    });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Failed to login", error: error.message });
   }
 });
-
 // Dashboard Routes
 app.get("/api/dashboard/admin", authMiddleware(["admin"]), async (req, res) => {
   try {
@@ -481,7 +600,6 @@ app.get("/api/mansion", async (req, res) => {
   }
 });
 
-// Mansion Featured (Placed BEFORE /api/mansion/:id to avoid routing conflict)
 app.get("/api/mansion/featured", async (req, res) => {
   try {
     console.log("GET /api/mansion/featured called");
@@ -537,7 +655,6 @@ app.post("/api/mansion/featured", async (req, res) => {
   }
 });
 
-// Mansion ID Routes (Placed AFTER /api/mansion/featured)
 app.get("/api/mansion/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -1004,17 +1121,17 @@ app.post("/api/propertyDetail", propertyUpload, async (req, res) => {
       return res.status(400).json({ message: "Property with this reference already exists" });
     }
     const filePaths = {
-      image: req.files["image"]?.[0]?.path,
-      video: req.files["video"]?.[0]?.path,
-      agentimage: req.files["agentimage"]?.[0]?.path,
+      images: req.files["images"]?.map((file) => file.path) || [], // Array of image URLs
+      agentimage: req.files["agentimage"]?.[0]?.path, // Single agent image URL
     };
-    if (!filePaths.image || !filePaths.agentimage) {
-      return res.status(400).json({ message: "Image and agent image are required" });
+    if (!filePaths.images.length) {
+      return res.status(400).json({ message: "At least one property image is required" });
     }
     const newProperty = new MansionDetail({
       reference,
       ...propertyData,
-      ...filePaths,
+      images: filePaths.images, // Store in "images" field
+      agentimage: filePaths.agentimage,
     });
     await newProperty.save();
     console.log("Saved property:", newProperty);
@@ -1033,7 +1150,7 @@ app.get("/api/properties", async (req, res) => {
   try {
     console.log("GET /api/properties called");
     const properties = await MansionDetail.find().sort({ createdAt: -1 }).lean();
-    res.json(properties);
+    res.json(properties); // Will include "images" field
   } catch (error) {
     console.error("Error fetching properties:", error);
     res.status(500).json({ message: "Failed to fetch properties", error: error.message });
@@ -1048,23 +1165,7 @@ app.get("/api/mansions/:reference", async (req, res) => {
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
-    res.json(property);
-  } catch (error) {
-    console.error("Error fetching property:", error);
-    res.status(500).json({ message: "Failed to fetch property", error: error.message });
-  }
-});
-
-app.get("/api/propertyDetail/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`GET /api/propertyDetail/${id} called`);
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid ID format" });
-    }
-    const property = await MansionDetail.findById(id).lean();
-    if (!property) return res.status(404).json({ message: "Property not found" });
-    res.json(property);
+    res.json(property); // Will include "images" field
   } catch (error) {
     console.error("Error fetching property:", error);
     res.status(500).json({ message: "Failed to fetch property", error: error.message });
@@ -1084,14 +1185,12 @@ app.put("/api/propertyDetail/:id", propertyUpload, async (req, res) => {
       return res.status(400).json({ message: "Property with this reference already exists" });
     }
     const filePaths = {
-      image: req.files["image"]?.[0]?.path,
-      video: req.files["video"]?.[0]?.path,
-      agentimage: req.files["agentimage"]?.[0]?.path,
+      images: req.files["images"]?.map((file) => file.path) || undefined, // Array of image URLs
+      agentimage: req.files["agentimage"]?.[0]?.path, // Single agent image URL
     };
-    const updateData = { reference, ...propertyData, ...filePaths };
-    Object.keys(filePaths).forEach((key) => {
-      if (!filePaths[key]) delete updateData[key];
-    });
+    const updateData = { reference, ...propertyData };
+    if (filePaths.images) updateData.images = filePaths.images; // Only update if new images provided
+    if (filePaths.agentimage) updateData.agentimage = filePaths.agentimage; // Only update if provided
     const property = await MansionDetail.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
@@ -1105,6 +1204,22 @@ app.put("/api/propertyDetail/:id", propertyUpload, async (req, res) => {
     } else {
       res.status(500).json({ message: "Failed to update property", error: error.message });
     }
+  }
+});
+
+app.get("/api/propertyDetail/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`GET /api/propertyDetail/${id} called`);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const property = await MansionDetail.findById(id).lean();
+    if (!property) return res.status(404).json({ message: "Property not found" });
+    res.json(property);
+  } catch (error) {
+    console.error("Error fetching property:", error);
+    res.status(500).json({ message: "Failed to fetch property", error: error.message });
   }
 });
 

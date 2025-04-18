@@ -28,26 +28,26 @@ const Signup = () => {
     }
     setLoading(true);
 
-    // Log formData for debugging
-    console.log("Sending formData:", formData);
-
-    // Include confirmPassword in the payload
+    // Include all required fields in the payload
     const payload = {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
       password: formData.password,
-      confirmPassword: formData.confirmPassword, // Added
+      confirmPassword: formData.confirmPassword,
       role: formData.role,
     };
 
+    console.log("Sending payload:", payload); // Debug payload
+
     try {
       const response = await axios.post("https://backend-5kh4.onrender.com/api/auth/signup", payload);
-      // Store user data if backend returns it
+      console.log("Signup Response:", response.data); // Debug response
       localStorage.setItem("token", response.data.token || "");
       localStorage.setItem("role", response.data.role || formData.role);
-      localStorage.setItem("firstName", formData.firstName);
-      localStorage.setItem("lastName", formData.lastName);
+      localStorage.setItem("firstName", response.data.firstName || "");
+      localStorage.setItem("lastName", response.data.lastName || "");
+      console.log("Stored in localStorage:", localStorage); // Debug localStorage
       setLoading(false);
       navigate("/dashboard");
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const HomePageForm = () => {
@@ -48,6 +48,15 @@ const HomePageForm = () => {
     ref4: '',
   });
 
+  const [reviewData, setReviewData] = useState({
+    _id: null, // To track the review being edited
+    reviewerName: '',
+    company: '',
+    content: '',
+    isApproved: false,
+  });
+
+  const [reviews, setReviews] = useState([]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -55,6 +64,25 @@ const HomePageForm = () => {
     process.env.NODE_ENV === "production"
       ? "https://backend-5kh4.onrender.com"
       : "http://localhost:5001";
+
+  // Fetch all reviews for admin
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/api/reviews/admin`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        setReviews(response.data);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setMessage('Failed to fetch reviews');
+      }
+    };
+
+    fetchReviews();
+  }, []);
 
   const handleFeaturedSubmit = async (e) => {
     e.preventDefault();
@@ -154,13 +182,11 @@ const HomePageForm = () => {
     ].filter(ref => ref);
 
     try {
-      // Save description and btntext
       await axios.post(`${BASE_URL}/api/mansion`, {
         description: mansionData.description,
         btntext: mansionData.btntext,
       });
 
-      // Save references if provided
       if (references.length > 0) {
         await axios.post(`${BASE_URL}/api/mansion/featured`, {
           references,
@@ -205,13 +231,11 @@ const HomePageForm = () => {
     ].filter(ref => ref);
 
     try {
-      // Save description and btntext
       await axios.post(`${BASE_URL}/api/penthouse`, {
         description: penthouseData.description,
         btntext: penthouseData.btntext,
       });
 
-      // Save references if provided
       if (references.length > 0) {
         await axios.post(`${BASE_URL}/api/penthouse/featured`, {
           references,
@@ -256,13 +280,11 @@ const HomePageForm = () => {
     ].filter(ref => ref);
 
     try {
-      // Save description and btntext
       await axios.post(`${BASE_URL}/api/collectibles`, {
         description: collectiblesData.description,
         btntext: collectiblesData.btntext,
       });
 
-      // Save references if provided
       if (references.length > 0) {
         await axios.post(`${BASE_URL}/api/collectibles/featured`, {
           references,
@@ -323,6 +345,124 @@ const HomePageForm = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage('');
+
+    if (!reviewData.reviewerName || !reviewData.company || !reviewData.content) {
+      setMessage('Reviewer name, company, and content are required!');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      let response;
+      if (reviewData._id) {
+        // Update existing review
+        response = await axios.put(
+          `${BASE_URL}/api/reviews/${reviewData._id}`,
+          {
+            reviewerName: reviewData.reviewerName,
+            company: reviewData.company,
+            content: reviewData.content,
+            isApproved: reviewData.isApproved,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+        setMessage('Review updated successfully!');
+      } else {
+        // Create new review
+        response = await axios.post(
+          `${BASE_URL}/api/reviews`,
+          {
+            reviewerName: reviewData.reviewerName,
+            company: reviewData.company,
+            content: reviewData.content,
+            isApproved: reviewData.isApproved,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+        setMessage('Review saved successfully!');
+      }
+
+      console.log('Review saved/updated:', response.data);
+
+      // Update reviews list
+      const updatedReviews = await axios.get(`${BASE_URL}/api/reviews/admin`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      setReviews(updatedReviews.data);
+
+      // Reset form
+      setReviewData({
+        _id: null,
+        reviewerName: '',
+        company: '',
+        content: '',
+        isApproved: false,
+      });
+    } catch (error) {
+      console.error('Error saving/updating review:', error);
+      setMessage(error.response?.data?.message || 'Failed to save/update review');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditReview = (review) => {
+    setReviewData({
+      _id: review._id,
+      reviewerName: review.reviewerName,
+      company: review.company,
+      content: review.content,
+      isApproved: review.isApproved,
+    });
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      await axios.delete(`${BASE_URL}/api/reviews/${reviewId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      setMessage('Review deleted successfully!');
+      setReviews(reviews.filter((review) => review._id !== reviewId));
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      setMessage(error.response?.data?.message || 'Failed to delete review');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setReviewData({
+      _id: null,
+      reviewerName: '',
+      company: '',
+      content: '',
+      isApproved: false,
+    });
   };
 
   return (
@@ -548,7 +688,7 @@ const HomePageForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reference No 2</label>
+            <label className="block/quotes/quotes text-sm font-medium text-gray-700 mb-1">Reference No 2</label>
             <input
               type="text"
               value={penthouseData.ref2}
@@ -717,6 +857,123 @@ const HomePageForm = () => {
             {message}
           </div>
         )}
+      </div>
+
+      <div className="bg-white shadow-md p-6 mb-6">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Client Reviews Section</h2>
+        <form onSubmit={handleReviewSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer Name</label>
+            <input
+              type="text"
+              value={reviewData.reviewerName}
+              onChange={(e) => setReviewData({ ...reviewData, reviewerName: e.target.value })}
+              className="w-full p-2 border outline-none mb-2"
+              placeholder="Enter reviewer name"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+            <input
+              type="text"
+              value={reviewData.company}
+              onChange={(e) => setReviewData({ ...reviewData, company: e.target.value })}
+              className="w-full p-2 border outline-none mb-2"
+              placeholder="Enter company name"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Review Content</label>
+            <textarea
+              value={reviewData.content}
+              onChange={(e) => setReviewData({ ...reviewData, content: e.target.value })}
+              className="w-full p-2 border outline-none mb-2"
+              placeholder="Enter review content"
+              rows="4"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Approve Review</label>
+            <input
+              type="checkbox"
+              checked={reviewData.isApproved}
+              onChange={(e) => setReviewData({ ...reviewData, isApproved: e.target.checked })}
+              className="h-5 w-5 text-gray-900 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-600">Check to approve review for public display</span>
+          </div>
+          <div className="flex space-x-4">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`flex-1 bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isLoading ? 'Saving...' : reviewData._id ? 'Update Review' : 'Save Review'}
+            </button>
+            {reviewData._id && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600"
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
+        </form>
+        {message && (
+          <div className={`mt-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="mt-8">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">Existing Reviews</h3>
+          {reviews.length === 0 ? (
+            <p className="text-gray-600">No reviews available.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 border text-left text-sm font-medium text-gray-700">Reviewer Name</th>
+                    <th className="px-4 py-2 border text-left text-sm font-medium text-gray-700">Company</th>
+                    <th className="px-4 py-2 border text-left text-sm font-medium text-gray-700">Content</th>
+                    <th className="px-4 py-2 border text-left text-sm font-medium text-gray-700">Approved</th>
+                    <th className="px-4 py-2 border text-left text-sm font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews.map((review) => (
+                    <tr key={review._id}>
+                      <td className="px-4 py-2 border text-sm text-gray-600">{review.reviewerName}</td>
+                      <td className="px-4 py-2 border text-sm text-gray-600">{review.company}</td>
+                      <td className="px-4 py-2 border text-sm text-gray-600">{review.content.substring(0, 50)}...</td>
+                      <td className="px-4 py-2 border text-sm text-gray-600">{review.isApproved ? 'Yes' : 'No'}</td>
+                      <td className="px-4 py-2 border text-sm">
+                        <button
+                          onClick={() => handleEditReview(review)}
+                          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 mr-2"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReview(review._id)}
+                          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

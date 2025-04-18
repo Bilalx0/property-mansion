@@ -3,13 +3,22 @@ import "../components/man.css";
 import { FaSearch } from "react-icons/fa";
 import logo from "../assests/TMM-LANDING PAGE 1.svg";
 import Footer from "../components/Footer";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import PenthouseList from "../components/PenthouseList";
 import { useMansions } from "../context/MansionContext";
 
 const Penthouses = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    bedrooms: "",
+    minPrice: "",
+    maxPrice: "",
+    minSize: "",
+    maxSize: "",
+    sortBy: "newest"
+  });
   const { mansions } = useMansions();
 
   // Split search query into individual terms
@@ -18,25 +27,93 @@ const Penthouses = () => {
     .split(" ")
     .filter((term) => term);
 
-  // Filter mansions based on search query (country, area, district, city)
+  // Filter penthouses based on search query and filters
   const filteredPenthouses = mansions.filter((mansion) => {
+    // Only include Penthouse property type
     if (mansion.propertytype !== "Penthouse") return false;
-    if (!searchQuery) return true;
 
-    // Check if any term matches any relevant field
-    return searchTerms.some((term) =>
-      [
-        mansion.country,
-        mansion.area,
-        mansion.district,
-        mansion.city,
-      ].some((field) => field && field.toLowerCase().includes(term))
-    );
+    // Search query filtering (country, area, district, city, community, subcommunity)
+    if (searchTerms.length > 0) {
+      const matchesSearch = searchTerms.some((term) =>
+        [
+          mansion.country,
+          mansion.area,
+          mansion.district,
+          mansion.city,
+          mansion.community,
+          mansion.subcommunity,
+        ].some((field) => field && field.toLowerCase().includes(term))
+      );
+      
+      if (!matchesSearch) return false;
+    }
+
+    // Bedrooms filter
+    if (filters.bedrooms && mansion.bedrooms < parseInt(filters.bedrooms)) {
+      return false;
+    }
+
+    // Price range filter
+    if (filters.minPrice && mansion.price < parseInt(filters.minPrice)) {
+      return false;
+    }
+    if (filters.maxPrice && mansion.price > parseInt(filters.maxPrice)) {
+      return false;
+    }
+
+    // Size range filter
+    if (filters.minSize && mansion.size < parseInt(filters.minSize)) {
+      return false;
+    }
+    if (filters.maxSize && mansion.size > parseInt(filters.maxSize)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Sort the filtered penthouses
+  const sortedPenthouses = [...filteredPenthouses].sort((a, b) => {
+    switch (filters.sortBy) {
+      case "price_low":
+        return a.price - b.price;
+      case "price_high":
+        return b.price - a.price;
+      case "size_low":
+        return a.size - b.size;
+      case "size_high":
+        return b.size - a.size;
+      case "newest":
+      default:
+        // Assuming there's a date field, otherwise fall back to reference
+        return a.reference < b.reference ? 1 : -1;
+    }
   });
 
   // Handle search input change
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      bedrooms: "",
+      minPrice: "",
+      maxPrice: "",
+      minSize: "",
+      maxSize: "",
+      sortBy: "newest"
+    });
   };
 
   return (
@@ -66,6 +143,15 @@ const Penthouses = () => {
               <FaSearch className="font-thin hover:text-[#00603A]" />
             </button>
 
+            {/* Filter Button */}
+            <button 
+              className="bg-[#00603A] px-4 py-1 flex items-center justify-center border border-[#00603A] text-white hover:text-[#00603A] hover:bg-transparent transition"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <span className="mr-1">Filters</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
             {/* Menu Icon */}
             <button className="p-2" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? (
@@ -76,6 +162,111 @@ const Penthouses = () => {
             </button>
           </div>
         </div>
+
+        {/* Filters Panel */}
+        {filtersOpen && (
+          <div className="w-full bg-white shadow-md rounded-md p-4 border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Bedrooms Filter */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">Bedrooms</label>
+                <select
+                  name="bedrooms"
+                  value={filters.bedrooms}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                >
+                  <option value="">Any</option>
+                  <option value="1">1+</option>
+                  <option value="2">2+</option>
+                  <option value="3">3+</option>
+                  <option value="4">4+</option>
+                  <option value="5">5+</option>
+                  <option value="6">6+</option>
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">Price Range (USD)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    name="minPrice"
+                    placeholder="Min"
+                    value={filters.minPrice}
+                    onChange={handleFilterChange}
+                    className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                  />
+                  <input
+                    type="number"
+                    name="maxPrice"
+                    placeholder="Max"
+                    value={filters.maxPrice}
+                    onChange={handleFilterChange}
+                    className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                  />
+                </div>
+              </div>
+
+              {/* Size Range */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">Size Range (sq.ft)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    name="minSize"
+                    placeholder="Min"
+                    value={filters.minSize}
+                    onChange={handleFilterChange}
+                    className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                  />
+                  <input
+                    type="number"
+                    name="maxSize"
+                    placeholder="Max"
+                    value={filters.maxSize}
+                    onChange={handleFilterChange}
+                    className="border border-gray-300 px-3 py-2 w-1/2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                  />
+                </div>
+              </div>
+
+              {/* Sort By */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">Sort By</label>
+                <select
+                  name="sortBy"
+                  value={filters.sortBy}
+                  onChange={handleFilterChange}
+                  className="border border-gray-300 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00603A]"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="price_low">Price (Low to High)</option>
+                  <option value="price_high">Price (High to Low)</option>
+                  <option value="size_low">Size (Small to Large)</option>
+                  <option value="size_high">Size (Large to Small)</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-end gap-2 col-span-1 md:col-span-2">
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => setFiltersOpen(false)}
+                  className="px-4 py-2 bg-[#00603A] text-white hover:bg-[#004e30] transition"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Popup */}
         {menuOpen && (
@@ -121,8 +312,13 @@ const Penthouses = () => {
           breathtaking views.
         </p>
 
+        {/* Results count */}
+        <p className="text-gray-600">
+          {sortedPenthouses.length} properties found
+        </p>
+
         {/* Penthouse List */}
-        <PenthouseList penthouses={filteredPenthouses} />
+        <PenthouseList penthouses={sortedPenthouses} />
       </div>
       <Footer />
     </>

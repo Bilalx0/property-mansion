@@ -11,24 +11,22 @@ import { useNavigate } from "react-router-dom";
 
 const Sidebar = ({ setViewType }) => {
   const navigate = useNavigate();
-  // Retrieve firstName and lastName from localStorage, fallback to "Admin" if not available
-  const firstName = localStorage.getItem("firstName") || "";
-  const lastName = localStorage.getItem("lastName") || "";
-  const fullName = `${firstName} ${lastName}`.trim() || "Admin";
+  const firstName = localStorage.getItem("firstName")?.trim() || "";
+  const lastName = localStorage.getItem("lastName")?.trim() || "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Admin";
+  console.log("Sidebar: firstName:", firstName, "lastName:", lastName, "fullName:", fullName); // Debug
 
   const handleLogout = () => {
-    // Clear authentication data
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("firstName");
     localStorage.removeItem("lastName");
-    // Navigate to login page
     navigate("/login");
   };
 
   return (
     <div className="w-full sm:w-[280px] bg-green-900 text-white items-center justify-center flex flex-col p-4 sm:relative z-10">
-      <h2 className="text-xl mb-16">Welcome {fullName}</h2>
+      <h2 className="text-xl mb-16">Welcome, {fullName}</h2>
       <ul className="space-y-8 font-inter mb-8">
         <li
           onClick={() => setViewType("leads")}

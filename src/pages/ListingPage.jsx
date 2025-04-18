@@ -23,7 +23,8 @@ import {
   FaInstagram, 
   FaLinkedin, 
   FaWhatsapp,
-  FaPhoneAlt 
+  FaPhoneAlt, 
+  FaTwitter
 } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { BsFlag } from "react-icons/bs";
@@ -31,17 +32,19 @@ import { BsFlag } from "react-icons/bs";
 import logo from "../assests/TMM-LANDING PAGE 1.svg";
 import sharelogo from "../assests/Share Icon_1.svg";
 import sharelogoHover from "../assests/Share Icon White.svg";
-import ImageGallery from "../components/ImageGallery";
-import Listing from "../components/listings";
+import MansionCard from "../components/Card";
 import Footer from "../components/Footer";
 
-const ListingPage = () => {
+const ListingPage = ({ mansion }) => {
   const { reference } = useParams();
   const { mansions, loading, error } = useMansions();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [showPhotosModal, setShowPhotosModal] = useState(false); // State for photos popup
+  const [selectedMansion, setSelectedMansion] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -49,15 +52,15 @@ const ListingPage = () => {
     phone: "",
     message: "",
   });
-  
-  // Scroll to top button visibility
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   const BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://backend-5kh4.onrender.com"
-    : "http://localhost:5001";
-  
+    process.env.NODE_ENV === "production"
+      ? "https://backend-5kh4.onrender.com"
+      : "http://localhost:5001";
+
+  const FALLBACK_IMAGE = "/images/fallback.jpg";
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -74,7 +77,7 @@ const ListingPage = () => {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
@@ -97,7 +100,7 @@ const ListingPage = () => {
     );
   }
 
-  const property = mansions?.find(m => m.reference === reference) || {
+  const property = mansions?.find((m) => m.reference === reference) || {
     title: "Exquisite villa in Palm Jumeirah with private pool",
     subtitle: "Presidential penthouse in luxury branded residence on Palm Jumeirah",
     status: "For Sale",
@@ -121,25 +124,36 @@ const ListingPage = () => {
     callno: "+971 50 123 4567",
     whatsaapno: "+971 50 123 4567",
     email: "stephan@luxuryproperty.com",
-    description: "It is hard to imagine a luxury property more impressive than this extraordinary five-bedroom Presidential penthouse apartment in the Armani Beach Residences, Palm Jumeirah. The Armani Beach Residences is one of Dubai's most anticipated luxury branded residences and its Presidential penthouse apartments represent the pinnacle of indulgent opulence. This expansive five-bedroom penthouse apartment has a meticulously designed interior by Armani/Casa and a host of state-of-the-art features that blend elegant style with contemporary functionality. The living areas are spacious and inviting, with unique detailing and stunning accents. The gourmet kitchen is equipped with premium appliances and finishes, offering an exceptional culinary experience. Each bedroom is a private sanctuary with designer ensuite bathrooms. The property enjoys unparalleled views of the Dubai skyline and the Arabian Gulf, creating an unforgettable backdrop for luxurious living.",
-    amenities: "Central A/C & heating, Balcony, Equipped kitchen, Built-in wardrobes, Private pool, Maids room, Security, Gym, Concierge service, Beach access, Private garden, Smart home system",
+    description:
+      "It is hard to imagine a luxury property more impressive than this extraordinary five-bedroom Presidential penthouse apartment in the Armani Beach Residences, Palm Jumeirah. The Armani Beach Residences is one of Dubai's most anticipated luxury branded residences and its Presidential penthouse apartments represent the pinnacle of indulgent opulence. This expansive five-bedroom penthouse apartment has a meticulously designed interior by Armani/Casa and a host of state-of-the-art features that blend elegant style with contemporary functionality. The living areas are spacious and inviting, with unique detailing and stunning accents. The gourmet kitchen is equipped with premium appliances and finishes, offering an exceptional culinary experience. Each bedroom is a private sanctuary with designer ensuite bathrooms. The property enjoys unparalleled views of the Dubai skyline and the Arabian Gulf, creating an unforgettable backdrop for luxurious living.",
+    amenities:
+      "Central A/C & heating, Balcony, Equipped kitchen, Built-in wardrobes, Private pool, Maids room, Security, Gym, Concierge service, Beach access, Private garden, Smart home system",
     images: [
       "/path/to/image1.jpg",
       "/path/to/image2.jpg",
       "/path/to/image3.jpg",
-    ],
+    ], // Updated to array
+    image: "/path/to/image1.jpg", // Kept for backward compatibility
     video: "https://www.youtube.com/embed/example",
-    agentimage: "/path/to/agent.jpg"
+    agentimage: "/path/to/agent.jpg",
   };
 
-  // Parse amenities to array
-  const amenitiesList = property.amenities ? property.amenities.split(",").map(item => item.trim()) : [];
+  const similarListings = mansions
+    .filter(
+      (m) =>
+        m.propertytype === property.propertytype &&
+        m.reference !== property.reference
+    )
+    .slice(0, 3);
 
-  // Split amenities into columns
+  const amenitiesList = property.amenities
+    ? property.amenities.split(",").map((item) => item.trim())
+    : [];
+
   const amenitiesColumns = [];
   const columnsCount = 3;
   const itemsPerColumn = Math.ceil(amenitiesList.length / columnsCount);
-  
+
   for (let i = 0; i < columnsCount; i++) {
     amenitiesColumns.push(
       amenitiesList.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn)
@@ -147,31 +161,97 @@ const ListingPage = () => {
   }
 
   const handleChange = (e) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch(`${BASE_URL}/api/inquiries`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const response = await fetch(`${BASE_URL}/api/inquiries`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const result = await response.json();
-    if (response.ok) {
-      alert("Inquiry submitted!");
-    } else {
-      alert(result.error || "Something went wrong.");
+      const result = await response.json();
+      if (response.ok) {
+        alert("Inquiry submitted!");
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          message: "",
+        });
+      } else {
+        alert(result.error || "Something went wrong.");
+      }
+    } catch (error) {
+      alert("Failed to submit inquiry. Please try again.");
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredMansions = mansions.filter((mansion) =>
+    [
+      mansion.country || "",
+      mansion.community || "",
+      mansion.subcommunity || "",
+      mansion.propertyaddress || "",
+    ].some((field) =>
+      field.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
+
+  const handleShareClick = (mansion) => {
+    setSelectedMansion(mansion);
+    setShareModalOpen(true);
+  };
+
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/mansion/${mansion.reference}`;
+  };
+
+  const encodeShareText = () => {
+    return encodeURIComponent(
+      `Check out this property: ${mansion.title} - AED ${mansion.price || "N/A"} in ${mansion.community || "N/A"}, ${mansion.country || "N/A"}`
+    );
+  };
+
+  const shareToFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToInstagram = () => {
+    navigator.clipboard.writeText(getShareUrl());
+    alert("Instagram sharing is not directly supported. Link copied to clipboard for sharing!");
+  };
+
+  const shareToLinkedIn = () => {
+    const url = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(getShareUrl())}&title=${encodeShareText()}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(getShareUrl())}&text=${encodeShareText()}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToWhatsApp = () => {
+    const url = `https://api.whatsapp.com/send?text=${encodeShareText()}%20${encodeURIComponent(getShareUrl())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <>
@@ -186,6 +266,8 @@ const ListingPage = () => {
                 type="text"
                 placeholder="Country, Area, District..."
                 className="w-full px-4 py-2 text-gray-700 text-sm bg-white focus:outline-none"
+                value={searchQuery}
+                onChange={handleSearchChange}
               />
             </div>
 
@@ -236,7 +318,7 @@ const ListingPage = () => {
         {/* Main Hero Image and Property Title */}
         <div className="relative w-full h-[50vh] mb-8">
           <img
-            src={`${property.image}`}
+            src={property.images?.[0] || property.image || FALLBACK_IMAGE}
             alt={property.title}
             className="w-full h-full object-cover"
           />
@@ -260,9 +342,51 @@ const ListingPage = () => {
                   {property.propertyaddress}, {property.community}, {property.subcommunity}, {property.country}
                 </p>
               </div>
+              {/* Show All Photos Button */}
+              <button
+                onClick={() => setShowPhotosModal(true)}
+                className="mt-4 px-6 py-2 bg-white text-green-700 font-inter border border-green-700 hover:bg-green-700 hover:text-white transition-all duration-300"
+              >
+                Show All Photos
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Photos Modal Popup */}
+        {showPhotosModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => setShowPhotosModal(false)}
+                className="absolute top-4 right-4 p-2 bg-gray-200 rounded-full hover:bg-gray-300"
+              >
+                <X size={24} />
+              </button>
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-green-800 mb-6 font-playfair">
+                  Property Photos
+                </h2>
+                {property.images && property.images.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {property.images.map((img, index) => (
+                      <img
+                        key={index}
+                        src={img || FALLBACK_IMAGE}
+                        alt={`${property.title} - Image ${index + 1}`}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 text-center">
+                    No images available for this property.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Property Details Summary Card */}
         <div className="w-full max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -413,10 +537,10 @@ const ListingPage = () => {
               </div>
             )}
 
-            {/* Share Listing Button */}
+            {/* Share Listing Button for Main Property */}
             <div className="mb-8">
               <button
-                onClick={() => setShareModalOpen(true)}
+                onClick={() => handleShareClick(property)}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className="w-full py-3 flex items-center justify-center gap-2 font-inter text-black border border-green-700 hover:bg-green-700 hover:text-white transition-all duration-300"
@@ -430,6 +554,8 @@ const ListingPage = () => {
               </button>
             </div>
           </div>
+
+          {/* Agent Contact Form */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-6">
               <div className="flex items-center justify-between mb-4">
@@ -439,7 +565,7 @@ const ListingPage = () => {
                 </div>
                 {property.agentimage ? (
                   <img
-                    src={`${property.agentimage}`}
+                    src={property.agentimage}
                     alt={property.agentname}
                     className="w-20 h-20 rounded-full object-cover"
                   />
@@ -465,65 +591,65 @@ const ListingPage = () => {
               </div>
 
               <form className="mt-6" onSubmit={handleSubmit}>
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          type="text"
-          name="firstName"
-          placeholder="First name *"
-          className="border p-2 w-full text-gray-700"
-          required
-          value={formData.firstName}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="lastName"
-          placeholder="Last name *"
-          className="border p-2 w-full text-gray-700"
-          required
-          value={formData.lastName}
-          onChange={handleChange}
-        />
-      </div>
-      <input
-        type="email"
-        name="email"
-        placeholder="Email *"
-        className="border p-2 w-full mt-4 text-gray-700"
-        required
-        value={formData.email}
-        onChange={handleChange}
-      />
-      <div className="flex items-center mt-4">
-        <span className="bg-gray-200 p-2 flex items-center text-gray-700">
-          +971
-        </span>
-        <input
-          type="text"
-          name="phone"
-          placeholder="Phone"
-          className="border-t border-b border-r p-2 w-full text-gray-700"
-          value={formData.phone}
-          onChange={handleChange}
-        />
-      </div>
-      <textarea
-        name="message"
-        placeholder="I'd like to have more information about this property..."
-        className="border p-2 w-full mt-4 text-gray-700"
-        rows="4"
-        required
-        value={formData.message}
-        onChange={handleChange}
-      ></textarea>
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    name="firstName"
+                    placeholder="First name *"
+                    className="border p-2 w-full text-gray-700"
+                    required
+                    value={formData.firstName}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    name="lastName"
+                    placeholder="Last name *"
+                    className="border p-2 w-full text-gray-700"
+                    required
+                    value={formData.lastName}
+                    onChange={handleChange}
+                  />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email *"
+                  className="border p-2 w-full mt-4 text-gray-700"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+                <div className="flex items-center mt-4">
+                  <span className="bg-gray-200 p-2 flex items-center text-gray-700">
+                    +971
+                  </span>
+                  <input
+                    type="text"
+                    name="phone"
+                    placeholder="Phone"
+                    className="border-t border-b border-r p-2 w-full text-gray-700"
+                    value={formData.phone}
+                    onChange={handleChange}
+                  />
+                </div>
+                <textarea
+                  name="message"
+                  placeholder="I'd like to have more information about this property..."
+                  className="border p-2 w-full mt-4 text-gray-700"
+                  rows="4"
+                  required
+                  value={formData.message}
+                  onChange={handleChange}
+                ></textarea>
 
-      <button
-        type="submit"
-        className="w-full mt-6 py-3 font-inter text-white bg-green-700 border border-green-700 hover:bg-white hover:text-green-700 transition-all duration-300"
-      >
-        Submit enquiry
-      </button>
-    </form>
+                <button
+                  type="submit"
+                  className="w-full mt-6 py-3 font-inter text-white bg-green-700 border border-green-700 hover:bg-white hover:text-green-700 transition-all duration-300"
+                >
+                  Submit enquiry
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -533,12 +659,50 @@ const ListingPage = () => {
           <h2 className="text-2xl font-bold text-green-800 mb-6 font-playfair">
             Similar Properties You May Like
           </h2>
-          <Listing />
+          {similarListings.length === 0 ? (
+            <p className="text-gray-600 text-center w-full text-lg">
+              No similar properties found.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-6 p-6 justify-center">
+              {similarListings.map((mansion) => (
+                <MansionCard
+                  key={mansion.reference}
+                  mansion={mansion}
+                  onShare={() => handleShareClick(mansion)}
+                />
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Search Results Section */}
+        {searchQuery && (
+          <div className="w-full max-w-7xl mx-auto mt-8">
+            <h2 className="text-2xl font-bold text-green-800 mb-6 font-playfair">
+              Search Results
+            </h2>
+            {filteredMansions.length === 0 ? (
+              <p className="text-gray-600 text-center w-full text-lg">
+                No properties found matching your search.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-6 p-6 justify-center">
+                {filteredMansions.map((mansion) => (
+                  <MansionCard
+                    key={mansion.reference}
+                    mansion={mansion}
+                    onShare={() => handleShareClick(mansion)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Share Modal Popup */}
-      {shareModalOpen && (
+      {shareModalOpen && selectedMansion && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
           <div className="bg-white shadow-lg max-w-md w-full">
             <div className="relative">
@@ -550,14 +714,15 @@ const ListingPage = () => {
               </button>
               <div className="relative w-full h-64">
                 <img
-                  src={`${property.image}`}
-                  alt={property.title}
+                  src={selectedMansion.images?.[0] || selectedMansion.image || FALLBACK_IMAGE}
+                  alt={selectedMansion.title}
                   className="w-full h-full object-cover mt-8"
+                  style={{marginTop: "32px"}}
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/55 to-transparent"></div>
                 <div className="absolute top-4 left-4 text-white">
                   <h2 className="text-2xl text-left font-playfair">
-                    {property.title}
+                    {selectedMansion.title}
                   </h2>
                 </div>
               </div>
@@ -566,23 +731,43 @@ const ListingPage = () => {
             <div className="p-5 text-left">
               <h3 className="text-lg font-semibold">Share</h3>
               <p className="text-gray-600 mt-2">
-                {property.subtitle}
+                {selectedMansion.subtitle}
               </p>
 
               <div className="flex justify-left space-x-4 mt-4">
-                <button className="p-2 bg-gray-200 rounded-full">
+                <button
+                  onClick={shareToFacebook}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-blue-600 hover:text-white transition-colors"
+                  aria-label="Share on Facebook"
+                >
                   <FaFacebook size={20} />
                 </button>
-                <button className="p-2 bg-gray-200 rounded-full">
+                <button
+                  onClick={shareToInstagram}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-pink-600 hover:text-white transition-colors"
+                  aria-label="Share on Instagram"
+                >
                   <FaInstagram size={20} />
                 </button>
-                <button className="p-2 bg-gray-200 rounded-full">
+                <button
+                  onClick={shareToLinkedIn}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-blue-800 hover:text-white transition-colors"
+                  aria-label="Share on LinkedIn"
+                >
                   <FaLinkedin size={20} />
                 </button>
-                <button className="p-2 bg-gray-200 rounded-full">
-                  <FaXTwitter size={20} />
+                <button
+                  onClick={shareToTwitter}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-blue-400 hover:text-white transition-colors"
+                  aria-label="Share on Twitter"
+                >
+                  <FaTwitter size={20} />
                 </button>
-                <button className="p-2 bg-gray-200 rounded-full">
+                <button
+                  onClick={shareToWhatsApp}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-green-500 hover:text-white transition-colors"
+                  aria-label="Share on WhatsApp"
+                >
                   <FaWhatsapp size={20} />
                 </button>
               </div>

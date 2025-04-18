@@ -35,16 +35,16 @@ const MansionForm = () => {
     callno: "",
   });
 
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]); // Changed to array for multiple images
   const [agentimage, setAgentImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://backend-5kh4.onrender.com"
-    : "http://localhost:5001";
+    process.env.NODE_ENV === "production"
+      ? "https://backend-5kh4.onrender.com"
+      : "http://localhost:5001";
 
   // Fetch existing data for editing
   useEffect(() => {
@@ -58,6 +58,7 @@ const MansionForm = () => {
             ...data,
             amenities: Array.isArray(data.amenities) ? data.amenities.join(", ") : data.amenities || "",
           });
+          // Note: Existing images are not fetched into the form; backend should return image URLs if needed
         } catch (error) {
           console.error("Error fetching property:", error);
           setSubmitError("Failed to load property data.");
@@ -76,7 +77,8 @@ const MansionForm = () => {
   };
 
   const handleImageChange = (e) => {
-    setImage(e.target.files[0]);
+    const files = Array.from(e.target.files); // Convert FileList to array
+    setImages(files); // Store all selected files
   };
 
   const handleAgentImageChange = (e) => {
@@ -99,14 +101,17 @@ const MansionForm = () => {
         formData.append(key, value);
       });
 
-      // Append image files if they exist
-      if (image) {
-        formData.append("image", image);
-      }
+      // Append multiple images
+      images.forEach((image, index) => {
+        formData.append("images", image); // Use "images" field for multiple files
+      });
+
+      // Append agent image if it exists
       if (agentimage) {
         formData.append("agentimage", agentimage);
       }
 
+      // Debug: Log form data entries
       console.log("Sending form data:", Object.fromEntries(formData));
 
       let response;
@@ -158,7 +163,7 @@ const MansionForm = () => {
           whatsaapno: "",
           callno: "",
         });
-        setImage(null);
+        setImages([]); // Reset images
         setAgentImage(null);
         document.querySelectorAll('input[type="file"]').forEach((input) => (input.value = ""));
       } else {
@@ -400,15 +405,26 @@ const MansionForm = () => {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Media</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="form-group">
-              <label className="block text-gray-700 mb-2">Property Image{!id && "*"}</label>
+              <label className="block text-gray-700 mb-2">Property Images{!id && "*"}</label>
               <input
                 type="file"
-                name="image"
+                name="images"
                 accept="image/*"
+                multiple // Allow multiple file selection
                 onChange={handleImageChange}
                 className="w-full p-2 border border-gray-300 rounded outline-none focus:border-green-500"
                 required={!id} // Required only for new properties
               />
+              {images.length > 0 && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <p>Selected images:</p>
+                  <ul className="list-disc pl-5">
+                    {images.map((image, index) => (
+                      <li key={index}>{image.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="block text-gray-700 mb-2">Video Link</label>
